@@ -1,0 +1,63 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Edit(lib/**)",
+      "Edit(test/**)",
+      "Edit(backend/lib/**)",
+      "Edit(backend/bin/**)",
+      "Edit(backend/test/**)",
+      "Edit(docs/**)",
+      "Edit(README.md)",
+      "Edit(.claude/agents/**)",
+      "Edit(.claude/commands/**)",
+      "Edit(.claude/memories/**)",
+      "Edit(.claude/skills/**)"
+    ],
+    "ask": [
+      "Bash",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Edit(CLAUDE.md)",
+      "Edit(Makefile)",
+      "Edit(tool/**)",
+      "Edit(dev/**)",
+      "Edit(.github/**)",
+      "Edit(.vscode/**)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/settings.local.json)",
+      "Edit(pubspec.yaml)",
+      "Edit(backend/pubspec.yaml)",
+      "Edit(analysis_options.yaml)",
+      "Edit(backend/analysis_options.yaml)",
+      "Edit(web/**)",
+      "Edit(docs/reviews/**)",
+      "Edit(docs/tasks/done/**)",
+      "Edit(.claude/commands/execute-tasks.md)",
+      "Edit(.claude/commands/review-changes.md)",
+      "Edit(.claude/commands/review-security.md)",
+      "Edit(.claude/commands/fix-review-findings.md)",
+      "Edit(.claude/agents/task-executor.md)",
+      "Edit(.claude/agents/code-reviewer.md)",
+      "Edit(.claude/agents/security-reviewer.md)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Edit(**/.env*)",
+      "Edit(pubspec.lock)",
+      "Edit(**/pubspec.lock)",
+      "Bash(sudo *)",
+      "Bash(rm -rf *)",
+      "Bash(git reset *)",
+      "Bash(git clean *)",
+      "Bash(git checkout -- *)",
+      "Bash(git restore *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git commit --no-verify *)",
+      "Bash(git push --no-verify *)"
+    ]
+  }
+}

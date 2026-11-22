@@ -1,0 +1,3 @@
+# Backend is plain Dart (no Flutter), so it uses the core Dart lint set
+# instead of inheriting the Flutter app's flutter_lints config.
+include: package:lints/recommended.yaml

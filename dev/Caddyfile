@@ -1,0 +1,28 @@
+{
+	# Local-only reverse proxy for Flutter dev servers + backend.
+	auto_https off
+}
+
+http://customer.local {
+	handle_path /api/* {
+		# Real orders are well under 1 KB; bigger bodies get 413 and never
+		# reach the backend (backend-request-body-limit).
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy localhost:3000
+	}
+	reverse_proxy localhost:8080
+}
+
+http://restaurant.local {
+	handle_path /api/* {
+		# Real orders are well under 1 KB; bigger bodies get 413 and never
+		# reach the backend (backend-request-body-limit).
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy localhost:3000
+	}
+	reverse_proxy localhost:8081
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Publish mDNS alias %i for food_orders dev
+Requires=avahi-daemon.service
+After=avahi-daemon.service network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/e37704hl/flutter_projects/food_orders/dev/mdns-publish.sh %i
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
