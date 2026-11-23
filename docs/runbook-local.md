@@ -334,6 +334,57 @@ In the restaurant app, press the download button in the top bar ("Xuất đơn h
 
 ---
 
+## 4c. Languages
+
+Both apps speak 10 languages: Tiếng Việt (the default), English, Deutsch, Español, Français, Русский, ລາວ, 日本語, 中文, 한국어. Background and rules: "Languages" in `CLAUDE.md`.
+
+### Change the language of an app
+
+1. Open the app (customer menu or restaurant orders screen) and tap the **globe icon** in the top bar.
+2. Pick a language. The whole app switches at once; the current one has a check mark.
+3. The choice is remembered **in that browser, for that site**. The customer site and the restaurant site remember separately, and a different browser or phone starts again in Vietnamese. It survives a reload.
+
+To forget the choice (back to Vietnamese): in Chrome open DevTools (F12), then Application, Local storage, pick the site, delete the key `food_orders_locale`, and reload. Clearing the site's data in the browser settings does the same.
+
+Not translated, on purpose: the monthly CSV and Excel reports, server error messages, and menu item names and descriptions (they stay as stored in the database). Prices always show as `25.000 VNĐ`. The browser tab title follows the language; the installed-app name (`web/manifest.json`) stays "Đặt Món".
+
+### Add an 11th language
+
+Example: Thai, code `th`. Every step is needed; the tests catch a missing one.
+
+1. Copy `lib/shared/l10n/app_vi.arb` to `lib/shared/l10n/app_th.arb`. Set `"@@locale": "th"` and translate **every** key (a key missing in one language fails the test). Keep placeholders such as `{name}` unchanged. Plural messages need the forms of that language.
+2. In `lib/shared/locale_controller.dart`, add `Locale('th')` to `LocaleController.supported`. The list order is the picker order.
+3. In `lib/shared/widgets/language_picker.dart`, add the language's own name to the `_nativeNames` map (e.g. `'th': 'ไทย'`). Without it the picker shows the bare code.
+4. Update the tests that pin the list: `test/shared/arb_completeness_test.dart` and `test/shared/locale_controller_test.dart` (count 10 to 11, new code in the set), the names map in `test/shared/language_picker_test.dart`, and the `hasLength(10)` check on `AppLocalizations.supportedLocales` in `test/restaurant_l10n_test.dart`. Any other test that fails after step 2 pins the list too; `make test` shows which.
+5. Check that Flutter's own widgets have the language (`flutter_localizations` covers most, Lao was checked for Material text only, in `test/shared/app_localizations_smoke_test.dart`); a language it doesn't cover needs extra work, so ask first.
+6. Run `flutter pub get` (or `flutter gen-l10n`) to regenerate `lib/shared/l10n/app_localizations*.dart`, then `make test`, then `make check`. Commit the new generated files with the ARB file.
+7. Add the language to the review log below, marked "not reviewed", and update the wording note in `lib/shared/l10n/README.md`.
+
+### Review or update one language's wording
+
+1. Give the language's file (`lib/shared/l10n/app_xx.arb`) to a fluent speaker. Each line is `"key": "text"`; they correct only the text, never the key or `{placeholders}`.
+2. Apply the corrections in the ARB file, run `flutter gen-l10n`, `make test`, and check the screens in the app (long words can overflow buttons).
+3. Record the sign-off in the table below: date, who reviewed, what was covered. Then update the wording note in `CLAUDE.md` ("Languages") and `lib/shared/l10n/README.md`.
+
+### Language review log
+
+State as of 2026-11-23. "Not reviewed" means the text is a machine-translated draft that no fluent speaker has checked; it ships that way with the owner's explicit acceptance.
+
+| Language | Code | Status | Date | Reviewer |
+|---|---|---|---|---|
+| Tiếng Việt | `vi` | owner-accepted (the text accepted earlier; strings added since, in the menu editor, export dialog and payment buttons, are drafts awaiting acceptance) | 2026-11-23 | owner |
+| English | `en` | not reviewed (partly restored from the old English, partly redrafted) | | |
+| 中文 | `zh` | not reviewed (machine-translated) | | |
+| ລາວ | `lo` | not reviewed (machine-translated) | | |
+| Español | `es` | not reviewed (machine-translated) | | |
+| Français | `fr` | not reviewed (machine-translated) | | |
+| Русский | `ru` | not reviewed (machine-translated; plural forms need care) | | |
+| Deutsch | `de` | not reviewed (machine-translated) | | |
+| 한국어 | `ko` | not reviewed (machine-translated) | | |
+| 日本語 | `ja` | not reviewed (machine-translated) | | |
+
+---
+
 ## 5. Proxy, local names and phones
 
 **Caddy:**
@@ -467,3 +518,5 @@ Status (2026-11-23): the first five cards are done (in `docs/tasks/done/`); only
 - **Order store:** the "storage full" clean-up on real data.
 - **Bank transfer QR:** scanning it with a real banking app (right account and amount), and the 5-minute expiry and renew flow on real phones (section 4a).
 - **Excel reports:** how Excel shows them compared with your sample files (section 4b).
+- **Languages:** the wording of 9 of the 10 languages (section 4c), that the globe picker works on real phones, and that Lao, Chinese, Japanese, Korean and Russian text draws without missing characters in a browser.
+- **Generated language files on CI:** `app_localizations*.dart` were generated with Flutter 3.50.1 locally; CI pins 3.47.7. Whether the checks give the same result there is unverified until CI runs.

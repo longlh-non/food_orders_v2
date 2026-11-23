@@ -13,7 +13,13 @@ lib/
 │   ├── models/      # Order (status + paymentMethod + paymentDueAt), OrderItem, OrderStatus, PaymentMethod, MenuItem, Topping
 │   ├── api/         # OrderApiClient (HTTP + SSE, incl. the payment routes) and OrderRepository (ChangeNotifier singleton cache)
 │   ├── money.dart   # formatVnd(): every price on screen (25.000 VNĐ)
-│   └── theme.dart   # customerTheme(), restaurantTheme()
+│   ├── theme.dart   # customerTheme(), restaurantTheme()
+│   ├── l10n.dart    # the one import for translated text: exports AppLocalizations and LocaleController
+│   ├── l10n/        # app_<code>.arb x 10 (app_vi.arb is the template) + the generated app_localizations*.dart (checked in; see "Languages") + README.md (wording status)
+│   ├── locale_controller.dart   # LocaleController: ChangeNotifier singleton; supported list, default vi, setLocale
+│   ├── locale_storage.dart      # conditional export: locale_storage_web.dart (localStorage) / locale_storage_stub.dart (VM, stores nothing)
+│   ├── localized_labels.dart    # OrderStatus.localized(l10n) and PaymentMethod.localized(l10n)
+│   └── widgets/     # language_picker.dart: LanguagePicker, the globe menu in both apps' AppBar
 ├── customer/
 │   ├── main.dart    # CustomerApp entry point
 │   ├── api/         # payment_client.dart: GET /payment-info and GET /orders/{id}/payment-qr
@@ -42,9 +48,12 @@ backend/
     └── xlsx_writer.dart       # a small .xlsx writer used by both reports
 ```
 
+`l10n.yaml` (project root) configures `flutter gen-l10n`: ARB folder `lib/shared/l10n`, template `app_vi.arb`, output `app_localizations.dart`. `pubspec.yaml` has `generate: true`.
+
 Two `main.dart` files are intentional — each is a separate entry point producing a separate web build. They run as independent processes and (in prod) will be deployed to different domains.
 
 State management: plain `ChangeNotifier` + `ListenableBuilder`. No Provider/Riverpod/Bloc yet.
+Dependencies: the owner approved exactly two new ones for the multi-language work, `intl` and `flutter_localizations` (an SDK package), as a one-off exception to "a new dependency needs approval" (invariant 5), scoped to that work (decision LANG3, 2026-11-23). `shared_preferences` was **not** approved: the chosen language is stored with a small `localStorage` shim instead. Any other new package still needs its own approval.
 Menu: there is no menu in the Flutter code. The customer app loads it from `GET /api/menu` (`MenuState`, started in `main.dart`), and the backend keeps it in the database. To change it, see "Editing the menu" under "Backend".
 Backend: a Dart `shelf` server at `backend/` that both apps call via `/api/*`. See "Backend" section below.
 
@@ -65,6 +74,19 @@ Tests: `flutter test`. Analyze: `flutter analyze`.
 
 Owner's step-by-step tasks (start, restart, back up, restore, staff ID and password, shop and bank settings, checks): see `docs/runbook-local.md`.
 Putting it on the public internet (free VM, Caddy, backups, release steps): see `docs/deploy.md`.
+
+## Languages
+
+Both apps are multi-language. The Vietnamese texts quoted elsewhere in this file ("Tiền mặt", "Chuyển khoản", "Hết hạn thanh toán" ...) are the default `vi` wording; the other languages show their own text for the same screens.
+
+- **10 locales:** `vi` (default and fallback), `en`, `de`, `es`, `fr`, `ru`, `lo`, `ja`, `zh` (Simplified), `ko`; `es` and `fr` are generic, no regional variants. The list and order live in `LocaleController.supported`; the picker shows the same order: Vietnamese and English first, then the rest alphabetically by native name (Deutsch, Español, Français, Русский, ລາວ, 日本語, 中文, 한국어).
+- **Runtime switching:** the globe button (`LanguagePicker`) is in the AppBar of the menu page (customer) and the orders page (restaurant). Each app's `MaterialApp` sits in a `ListenableBuilder` on `LocaleController.instance`, so a pick re-renders the whole app at once.
+- **Stored per browser:** `localStorage` key `food_orders_locale` (the language code, e.g. `vi`), read by `LocaleController.init()` in each `main()` before `runApp`. `localStorage` is per origin, so the customer and restaurant sites remember their own choice. A missing, blocked or unknown stored value means `vi`; a browser that refuses the write keeps the choice only until reload. On the Dart VM (tests) the stub stores nothing.
+- **Adding or changing a string:** edit **all 10** `lib/shared/l10n/app_*.arb` files with the same key (`app_vi.arb` is the template and holds the `@key` metadata and placeholders). `flutter gen-l10n` regenerates `app_localizations*.dart`; it runs on `flutter pub get`, `flutter run` and `flutter test`. The generated files are **checked in**, so commit them with the ARB change. `test/shared/arb_completeness_test.dart` fails if any language lacks a key or the file set differs from `LocaleController.supported`. Read texts in widgets with `AppLocalizations.of(context)!` (import `lib/shared/l10n.dart`); use `OrderStatus.localized(l10n)` / `PaymentMethod.localized(l10n)` for statuses and payment methods.
+- **Prices stay `formatVnd`** in every language (25.000 VNĐ); the language never changes how a price is written.
+- **Not translated (LANG6, out of scope):** backend text (the CSV and both `.xlsx` reports, their file names, and HTTP error bodies) and menu item names and descriptions (they come from the database via `GET /menu`).
+- **Web page files stay Vietnamese:** `web/index.html` (`lang="vi"`, title "Đặt Món") and `web/manifest.json` are static and cannot follow the picker. The browser tab title does follow it, through `MaterialApp.onGenerateTitle` (`appTitleCustomer`, `appTitleRestaurant`).
+- **Wording status (as of 2026-11-23):** `vi` is the Vietnamese the owner accepted, except strings drafted after that acceptance (menu editor, export dialog, payment buttons), whose acceptance is pending. `en` is partly restored from the old English and partly redrafted; unconfirmed. **`zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja` were machine-translated and have not been confirmed by a fluent speaker as of 2026-11-23.** The owner explicitly accepted shipping them as unverified (LANG5 closed that way). Lao and Russian plural forms need particular care. Details: `lib/shared/l10n/README.md`; the per-language review record is in `docs/runbook-local.md` ("Language review log").
 
 ## Local domains (customer.local / restaurant.local)
 
@@ -557,6 +579,9 @@ If you ever rewrite with a different backend (Node, Go, Rust), SSE will Just Wor
 - The 5-minute countdown on the customer's phone uses the phone's clock, so it can be wrong on a phone with a wrong clock. The server's clock decides the expiry.
 - Whether the chime should ring when a transfer order arrives, when it is paid, or both is an open owner question (today: on arrival).
 - Whether a banking app opens the transfer with the right amount from the QR, whether the chime sounds, and whether Excel shows the two reports as the owner's samples are owner acceptance in the real environment: unverified by agents.
+- **Wording of 9 of the 10 languages is unverified:** the 8 machine-translated ones (`zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`) have no fluent-speaker check, and `en` is partly redrafted (see "Languages").
+- **Generated l10n files may format differently on CI:** `app_localizations*.dart` are checked in and were generated with the local Flutter (3.50.1); CI pins Flutter 3.47.7. Whether a fresh `flutter gen-l10n` and `make format-check` give identical files there is unverified until CI runs.
+- **Picker and glyph rendering are unverified in a browser:** that the globe menu works on real phones and that Lao, Chinese, Japanese, Korean and Russian text draws without missing characters (web fonts load on demand) has not been checked by an agent.
 - No delivery tracking, no multi-restaurant support. Deliberately out of scope.
 - SSE reconnect uses a plain 2-second backoff — add exponential backoff before shipping.
 
