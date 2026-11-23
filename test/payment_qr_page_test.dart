@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/l10n_app.dart';
+
 import 'package:food_orders/customer/api/payment_client.dart';
 import 'package:food_orders/customer/pages/payment_qr_page.dart';
 import 'package:food_orders/shared/api/order_api_client.dart';
@@ -117,7 +120,7 @@ void main() {
     addTearDown(tester.view.reset);
     final client = PaymentClient(client: MockClient((r) => onQr(r)));
     await tester.pumpWidget(
-      MaterialApp(
+      l10nApp(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(scale)),
@@ -863,7 +866,7 @@ void main() {
   testWidgets('leaving the page cancels the timer', (tester) async {
     setOrder(orderWith());
     await open(tester);
-    await tester.pageBack();
+    await goBack(tester);
     await tester.pumpAndSettle();
     // flutter_test fails the test if a periodic timer survives the page.
     await advance(tester, const Duration(seconds: 5));
@@ -879,7 +882,7 @@ void main() {
     onQr = (_) => gate.future;
     setOrder(orderWith());
     await open(tester);
-    await tester.pageBack();
+    await goBack(tester);
     await tester.pumpAndSettle();
     gate.complete(http.Response('x', 500));
     await tester.pumpAndSettle();

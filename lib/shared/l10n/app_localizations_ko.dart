@@ -223,4 +223,210 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get menuSaveFailed => '저장할 수 없습니다. 다시 시도하세요.';
+
+  @override
+  String get customerMenuTitle => '메뉴';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '장바구니에 있는 $count개 상품의 가격이 변경되었습니다.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count개 상품이 메뉴에서 없어져 장바구니에서 삭제되었습니다.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return '주문 #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return '주문 #$shortId: 결제 시간이 만료되었습니다';
+  }
+
+  @override
+  String get customerMenuLoadFailed => '메뉴를 불러오지 못했습니다';
+
+  @override
+  String get customerCartTooltip => '장바구니';
+
+  @override
+  String get customerCategoryFood => '음식';
+
+  @override
+  String get customerCategoryDrink => '음료';
+
+  @override
+  String get customerCategorySnack => '가벼운 식사';
+
+  @override
+  String get customerCategoryNibble => '군것질';
+
+  @override
+  String get customerCategoryEmpty => '이 카테고리에는 아직 상품이 없습니다';
+
+  @override
+  String get customerYourOrders => '내 주문';
+
+  @override
+  String get customerOrderExpired => '결제 시간 만료';
+
+  @override
+  String customerAddItem(String name) {
+    return '$name 추가';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return '$names 추가됨';
+  }
+
+  @override
+  String get customerSoldOut => '품절';
+
+  @override
+  String get customerCartTitle => '내 장바구니';
+
+  @override
+  String get customerCartEmpty => '장바구니가 비어 있습니다.';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / 개';
+  }
+
+  @override
+  String get customerNameLabel => '이름';
+
+  @override
+  String get customerNameRequired => '이름을 입력해 주세요';
+
+  @override
+  String customerCartTotal(String total) {
+    return '합계: $total';
+  }
+
+  @override
+  String get customerOrderFailed => '주문할 수 없습니다. 다시 시도해 주세요.';
+
+  @override
+  String get customerPlaceOrder => '주문하기';
+
+  @override
+  String get customerTransferOff => '계좌 이체가 켜져 있지 않습니다';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return '주문이 완료되었습니다, $name님!';
+  }
+
+  @override
+  String get customerAddToppings => '토핑 추가';
+
+  @override
+  String get customerAddDrink => '음료 추가';
+
+  @override
+  String get customerChooseDrink => '음료 선택';
+
+  @override
+  String get customerBack => '뒤로';
+
+  @override
+  String get customerNext => '다음';
+
+  @override
+  String get customerAddButton => '추가';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => '주문을 찾을 수 없습니다.';
+
+  @override
+  String get customerPayChecking => '결제를 확인하는 중…';
+
+  @override
+  String get customerPayCancelled => '주문이 취소되었습니다.';
+
+  @override
+  String get customerPayReceived => '결제가 확인되었습니다. 감사합니다!';
+
+  @override
+  String get customerPayCashOrder => '주문은 현금으로 결제됩니다.';
+
+  @override
+  String get customerPayRecheck => '다시 확인';
+
+  @override
+  String get customerBackToMenu => '메뉴로 돌아가기';
+
+  @override
+  String get customerSwitchToCash => '현금 결제로 변경';
+
+  @override
+  String get customerPayInstruction => '주문을 유지하려면 5분 안에 이체해 주세요.';
+
+  @override
+  String customerCountdown(String time) {
+    return '남은 시간 $time';
+  }
+
+  @override
+  String get customerBank => '은행';
+
+  @override
+  String get customerAccountNumber => '계좌번호';
+
+  @override
+  String get customerAccountName => '예금주';
+
+  @override
+  String get customerAmount => '금액';
+
+  @override
+  String get customerTransferContent => '이체 내용';
+
+  @override
+  String get customerQrLoadFailed => 'QR 코드를 불러오지 못했습니다.';
+
+  @override
+  String get customerCashHint => '지금 결제하지 않으려면 현금 결제로 변경하세요';
+
+  @override
+  String get customerPayChanged => '주문이 방금 변경되어 다시 확인하는 중입니다';
+
+  @override
+  String get customerPayActionFailed => '실행하지 못했습니다. 다시 시도해 주세요.';
+
+  @override
+  String get customerPayTooLate => '15분이 지났습니다. 다시 주문하시거나 매장에 알려 주세요.';
+
+  @override
+  String get customerPayExpired => '주문의 결제 시간이 만료되었습니다. 현금 결제로 변경하시겠어요?';
+
+  @override
+  String get customerPayTransferUnavailable => '계좌 이체를 일시적으로 사용할 수 없습니다';
+
+  @override
+  String get customerNewQr => '새 QR 코드 만들기';
+
+  @override
+  String get customerQrSemantics => '계좌 이체 QR 코드';
 }

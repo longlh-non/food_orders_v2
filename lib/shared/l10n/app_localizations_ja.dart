@@ -223,4 +223,210 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get menuSaveFailed => '保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get customerMenuTitle => 'メニュー';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'カート内の$count品の価格が変更されました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count品がメニューから外れたため、カートから削除されました。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return '注文 #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return '注文 #$shortId: 支払い期限が切れました';
+  }
+
+  @override
+  String get customerMenuLoadFailed => 'メニューを読み込めませんでした';
+
+  @override
+  String get customerCartTooltip => 'カート';
+
+  @override
+  String get customerCategoryFood => '料理';
+
+  @override
+  String get customerCategoryDrink => 'ドリンク';
+
+  @override
+  String get customerCategorySnack => '軽食';
+
+  @override
+  String get customerCategoryNibble => 'おやつ';
+
+  @override
+  String get customerCategoryEmpty => 'このカテゴリにはまだ商品がありません';
+
+  @override
+  String get customerYourOrders => 'ご注文';
+
+  @override
+  String get customerOrderExpired => '支払い期限切れ';
+
+  @override
+  String customerAddItem(String name) {
+    return '$nameを追加';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return '$namesを追加しました';
+  }
+
+  @override
+  String get customerSoldOut => '売り切れ';
+
+  @override
+  String get customerCartTitle => 'カート';
+
+  @override
+  String get customerCartEmpty => 'カートは空です。';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / 品';
+  }
+
+  @override
+  String get customerNameLabel => 'お名前';
+
+  @override
+  String get customerNameRequired => 'お名前を入力してください';
+
+  @override
+  String customerCartTotal(String total) {
+    return '合計: $total';
+  }
+
+  @override
+  String get customerOrderFailed => '注文できませんでした。もう一度お試しください。';
+
+  @override
+  String get customerPlaceOrder => '注文する';
+
+  @override
+  String get customerTransferOff => '銀行振込は有効になっていません';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return 'ご注文ありがとうございます、$nameさん！';
+  }
+
+  @override
+  String get customerAddToppings => 'トッピングを追加';
+
+  @override
+  String get customerAddDrink => 'ドリンクを追加';
+
+  @override
+  String get customerChooseDrink => 'ドリンクを選択';
+
+  @override
+  String get customerBack => '戻る';
+
+  @override
+  String get customerNext => '次へ';
+
+  @override
+  String get customerAddButton => '追加';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => '注文が見つかりません。';
+
+  @override
+  String get customerPayChecking => '支払いを確認しています…';
+
+  @override
+  String get customerPayCancelled => 'ご注文はキャンセルされました。';
+
+  @override
+  String get customerPayReceived => 'お支払いを確認しました。ありがとうございます！';
+
+  @override
+  String get customerPayCashOrder => 'ご注文は現金でのお支払いになります。';
+
+  @override
+  String get customerPayRecheck => '再確認';
+
+  @override
+  String get customerBackToMenu => 'メニューに戻る';
+
+  @override
+  String get customerSwitchToCash => '現金払いに変更';
+
+  @override
+  String get customerPayInstruction => 'ご注文を保持するため、5分以内にお振込みください。';
+
+  @override
+  String customerCountdown(String time) {
+    return '残り $time';
+  }
+
+  @override
+  String get customerBank => '銀行';
+
+  @override
+  String get customerAccountNumber => '口座番号';
+
+  @override
+  String get customerAccountName => '口座名義';
+
+  @override
+  String get customerAmount => '金額';
+
+  @override
+  String get customerTransferContent => '振込内容';
+
+  @override
+  String get customerQrLoadFailed => 'QRコードを読み込めませんでした。';
+
+  @override
+  String get customerCashHint => '今すぐ支払わない場合は現金払いに変更してください';
+
+  @override
+  String get customerPayChanged => '注文が更新されました。再確認しています';
+
+  @override
+  String get customerPayActionFailed => '実行できませんでした。もう一度お試しください。';
+
+  @override
+  String get customerPayTooLate => '15分以上経過しました。もう一度注文するか、お店にお知らせください。';
+
+  @override
+  String get customerPayExpired => 'ご注文の支払い期限が切れました。現金払いに変更しますか？';
+
+  @override
+  String get customerPayTransferUnavailable => '銀行振込は一時的にご利用いただけません';
+
+  @override
+  String get customerNewQr => '新しいQRコードを作成';
+
+  @override
+  String get customerQrSemantics => '銀行振込のQRコード';
 }

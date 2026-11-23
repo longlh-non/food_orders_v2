@@ -158,7 +158,7 @@ void main() {
     expect(await state.setPrice('a', 1000001), MenuSaveResult.failed);
     expect(await state.setPrice('a', -1), MenuSaveResult.failed);
     expect(patches, isEmpty);
-    expect(state.saveError, isNotNull);
+    expect(state.saveError, MenuSaveError.invalid);
   });
 
   test('failure keeps the old value and shows an error', () async {
@@ -168,7 +168,7 @@ void main() {
     await state.load();
     expect(await state.setPrice('a', 5000), MenuSaveResult.failed);
     expect(state.items.first.price, 4000);
-    expect(state.saveError, 'Không lưu được. Thử lại.');
+    expect(state.saveError, MenuSaveError.other);
     expect(state.isSaving('a'), isFalse);
   });
 
@@ -179,7 +179,7 @@ void main() {
     await state.load();
     expect(await state.setPrice('a', 5000), MenuSaveResult.needsCredentials);
     expect(StaffCredentialsHolder.instance.value, isNull);
-    expect(state.saveError, 'Sai mã nhân viên hoặc mật khẩu');
+    expect(state.saveError, MenuSaveError.wrongCredentials);
     expect(state.items.first.price, 4000);
     // Without credentials nothing is sent.
     patches.clear();
@@ -193,7 +193,7 @@ void main() {
     addTearDown(state.dispose);
     await state.load();
     expect(await state.setAvailable('a', false), MenuSaveResult.failed);
-    expect(state.saveError, 'Chức năng sửa thực đơn đang tắt trên máy chủ');
+    expect(state.saveError, MenuSaveError.editingDisabled);
     expect(StaffCredentialsHolder.instance.value, isNotNull);
   });
 
@@ -204,10 +204,12 @@ void main() {
     addTearDown(state.dispose);
     await state.load();
     await state.setAvailable('a', false);
-    expect(state.saveError, 'Thử sai quá nhiều lần. Thử lại sau 42 giây.');
+    expect(state.saveError, MenuSaveError.tooManyTries);
+    expect(state.saveErrorWaitSeconds, 42);
     onPatch = (_) async => http.Response('x', 429);
     await state.setAvailable('a', false);
-    expect(state.saveError, 'Thử sai quá nhiều lần. Vui lòng thử lại sau.');
+    expect(state.saveError, MenuSaveError.tooManyTries);
+    expect(state.saveErrorWaitSeconds, isNull);
   });
 
   test('no message contains the staff ID or password', () async {
@@ -218,8 +220,9 @@ void main() {
       onPatch = (_) async => http.Response('$staffId $password', status);
       StaffCredentialsHolder.instance.value = creds;
       await state.setAvailable('a', false);
-      expect(state.saveError, isNot(contains(staffId)));
-      expect(state.saveError, isNot(contains(password)));
+      final shown = '${state.saveError} ${state.saveErrorWaitSeconds}';
+      expect(shown, isNot(contains(staffId)));
+      expect(shown, isNot(contains(password)));
     }
   });
 

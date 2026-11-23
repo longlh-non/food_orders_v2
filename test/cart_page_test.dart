@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/l10n_app.dart';
+
 import 'package:food_orders/customer/api/payment_client.dart';
 import 'package:food_orders/customer/pages/cart_page.dart';
 import 'package:food_orders/customer/pages/payment_qr_page.dart';
@@ -81,7 +84,7 @@ void main() {
     );
     Cart.instance.add(xoiThit);
     await tester.pumpWidget(
-      MaterialApp(
+      l10nApp(
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -113,7 +116,7 @@ void main() {
   ) async {
     Cart.instance.clear();
     await tester.pumpWidget(
-      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+      l10nApp(home: CartPage(paymentClient: paymentClient())),
     );
     await tester.pumpAndSettle();
     expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
@@ -125,7 +128,7 @@ void main() {
   ) async {
     Cart.instance.add(xoiThit);
     await tester.pumpWidget(
-      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+      l10nApp(home: CartPage(paymentClient: paymentClient())),
     );
     await tester.pumpAndSettle();
     expect(find.text('Tên của bạn'), findsOneWidget);
@@ -276,7 +279,7 @@ void main() {
       );
     }
     await tester.pumpWidget(
-      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+      l10nApp(home: CartPage(paymentClient: paymentClient())),
     );
     final list = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
@@ -399,7 +402,7 @@ void main() {
       ..add(traDa);
 
     await tester.pumpWidget(
-      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+      l10nApp(home: CartPage(paymentClient: paymentClient())),
     );
 
     expect(find.text('25.000 VNĐ / món'), findsOneWidget);
@@ -420,7 +423,7 @@ void main() {
 
     await tester.tap(find.text('Đặt hàng'));
     await tester.pump();
-    await tester.pageBack();
+    await goBack(tester);
     await tester.pumpAndSettle();
     expect(find.byType(CartPage), findsNothing);
 
@@ -456,7 +459,7 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        MaterialApp(
+        l10nApp(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
                 .copyWith(textScaler: TextScaler.linear(scale)),
@@ -508,7 +511,7 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        MaterialApp(
+        l10nApp(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
                 .copyWith(textScaler: const TextScaler.linear(2.0)),

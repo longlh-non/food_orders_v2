@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/l10n.dart';
 import '../state/staff_credentials.dart';
 
 /// Asks staff for the shared staff ID and password, pre-filled from
 /// [StaffCredentialsHolder] when it already has them. Returns the typed
-/// [StaffCredentials] on "Xác nhận", or null if staff cancel.
+/// [StaffCredentials] on "Xác nhận" (Vietnamese; the button text follows the language), or null if staff cancel.
 ///
 /// This dialog only gathers and checks the two values (same fields and
 /// rules as the export dialog: no autofill, obscured password, a plain-
@@ -12,11 +13,11 @@ import '../state/staff_credentials.dart';
 /// any request. The caller sends the request, decides what the server's
 /// answer means, and updates or clears [StaffCredentialsHolder] itself.
 ///
-/// [initialError] shows once, e.g. right after a 401 cleared the remembered
+/// [title] defaults to the translated "staff login" text. [initialError] shows once, e.g. right after a 401 cleared the remembered
 /// values and the caller is asking again.
 Future<StaffCredentials?> showStaffLoginDialog(
   BuildContext context, {
-  String title = 'Đăng nhập nhân viên',
+  String? title,
   String? initialError,
 }) => showDialog<StaffCredentials>(
   context: context,
@@ -24,9 +25,9 @@ Future<StaffCredentials?> showStaffLoginDialog(
 );
 
 class _StaffLoginDialog extends StatefulWidget {
-  const _StaffLoginDialog({required this.title, this.initialError});
+  const _StaffLoginDialog({this.title, this.initialError});
 
-  final String title;
+  final String? title;
   final String? initialError;
 
   @override
@@ -57,6 +58,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
   }
 
   void _confirm() {
+    final l10n = AppLocalizations.of(context)!;
     final credentials = StaffCredentials(
       id: _id.text.trim(),
       password: _password.text.trim(),
@@ -64,9 +66,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
     if (!credentials.isSendable) {
       // Checked here: a browser would refuse such a header and it would
       // look like a network failure.
-      setState(
-        () => _error = 'Chỉ dùng chữ không dấu, số và ký hiệu thông thường',
-      );
+      setState(() => _error = l10n.staffPlainCharsError);
       return;
     }
     Navigator.of(context).pop(credentials);
@@ -74,10 +74,11 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final canConfirm =
         _id.text.trim().isNotEmpty && _password.text.trim().isNotEmpty;
     return AlertDialog(
-      title: Text(widget.title),
+      title: Text(widget.title ?? l10n.staffLoginTitle),
       // Scrolls at large text; the buttons stay visible.
       scrollable: true,
       content: Column(
@@ -92,7 +93,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
             // live in memory only, not in every device's password manager.
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Mã nhân viên'),
+            decoration: InputDecoration(labelText: l10n.staffIdLabel),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -102,7 +103,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
             autocorrect: false,
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Mật khẩu nhân viên'),
+            decoration: InputDecoration(labelText: l10n.staffPasswordLabel),
             onSubmitted: (_) {
               if (canConfirm) _confirm();
             },
@@ -122,11 +123,11 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Hủy'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: canConfirm ? _confirm : null,
-          child: const Text('Xác nhận'),
+          child: Text(l10n.commonConfirm),
         ),
       ],
     );

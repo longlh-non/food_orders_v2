@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../shared/api/order_api_client.dart';
 import '../../shared/api/order_repository.dart';
+import '../../shared/l10n.dart';
 import '../../shared/models/order.dart';
 import '../../shared/money.dart';
 import '../api/payment_client.dart';
@@ -308,7 +309,9 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chuyển khoản')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.paymentBankTransfer),
+      ),
       body: SafeArea(
         child: Align(
           alignment: Alignment.topCenter,
@@ -327,14 +330,11 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   /// One view per state of the order. Reads the clock fresh, so a QR can't
   /// outlive its deadline even for the moment before the next timer tick.
   Widget _body(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final order = _order;
     final now = widget.now();
     if (order == null) {
-      return _message(
-        context,
-        'Không tìm thấy đơn hàng.',
-        withMenuButton: true,
-      );
+      return _message(context, l10n.customerPayNotFound, withMenuButton: true);
     }
     switch (order.status) {
       case OrderStatus.awaiting_payment:
@@ -343,7 +343,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
         // (cancelled) decides what happens next.
         return _message(
           context,
-          'Đang kiểm tra thanh toán…',
+          l10n.customerPayChecking,
           progress: true,
           recheck: true,
           withMenuButton: true,
@@ -352,7 +352,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
         if (!order.expiredUnpaid) {
           return _message(
             context,
-            'Đơn của bạn đã bị hủy.',
+            l10n.customerPayCancelled,
             withMenuButton: true,
           );
         }
@@ -363,8 +363,8 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
         return _message(
           context,
           order.paymentMethod == PaymentMethod.bank_transfer
-              ? 'Đã nhận thanh toán. Cảm ơn bạn!'
-              : 'Đơn của bạn sẽ được thanh toán bằng tiền mặt.',
+              ? l10n.customerPayReceived
+              : l10n.customerPayCashOrder,
           icon: Icons.check_circle_outline,
           withMenuButton: true,
         );
@@ -379,6 +379,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
     bool withMenuButton = false,
     bool recheck = false,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -397,27 +398,34 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _busy ? null : _recheck,
-            child: const Text('Kiểm tra lại'),
+            child: Text(l10n.customerPayRecheck),
           ),
         ],
         if (withMenuButton) ...[
           SizedBox(height: recheck ? 8 : 24),
           if (recheck)
-            OutlinedButton(onPressed: _backToMenu, child: const Text('Về menu'))
+            OutlinedButton(
+              onPressed: _backToMenu,
+              child: Text(l10n.customerBackToMenu),
+            )
           else
-            FilledButton(onPressed: _backToMenu, child: const Text('Về menu')),
+            FilledButton(
+              onPressed: _backToMenu,
+              child: Text(l10n.customerBackToMenu),
+            ),
         ],
       ],
     );
   }
 
-  Widget _cashButton() => FilledButton(
+  Widget _cashButton(BuildContext context) => FilledButton(
     onPressed: _busy ? null : _switchToCash,
-    child: const Text('Chuyển sang tiền mặt'),
+    child: Text(AppLocalizations.of(context)!.customerSwitchToCash),
   );
 
   Widget _qrView(BuildContext context, Order order, DateTime now) {
     final text = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
     final qr = _qr;
     final remaining = order.paymentDueAt!.difference(now);
     // Round up, so 04:59.4 reads 05:00 and 00:00 only when it is over.
@@ -429,13 +437,13 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Hãy chuyển khoản trong vòng 5 phút để giữ đơn.',
+          l10n.customerPayInstruction,
           style: text.titleMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          'Còn lại $countdown',
+          l10n.customerCountdown(countdown),
           key: const Key('payment-countdown'),
           style: text.headlineSmall,
           textAlign: TextAlign.center,
@@ -444,26 +452,23 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
         if (qr != null) ...[
           _QrBox(payload: qr.payload),
           const SizedBox(height: 16),
-          _detail('Ngân hàng', qr.bankName),
-          _detail('Số tài khoản', qr.accountNumber),
-          _detail('Chủ tài khoản', qr.accountName),
-          _detail('Số tiền', formatVnd(qr.amount)),
-          _detail('Nội dung chuyển khoản', qr.reference),
+          _detail(l10n.customerBank, qr.bankName),
+          _detail(l10n.customerAccountNumber, qr.accountNumber),
+          _detail(l10n.customerAccountName, qr.accountName),
+          _detail(l10n.customerAmount, formatVnd(qr.amount)),
+          _detail(l10n.customerTransferContent, qr.reference),
         ] else if (_qrFailed) ...[
-          const Text('Không tải được mã QR.', textAlign: TextAlign.center),
+          Text(l10n.customerQrLoadFailed, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          OutlinedButton(onPressed: _retryQr, child: const Text('Thử lại')),
+          OutlinedButton(onPressed: _retryQr, child: Text(l10n.commonRetry)),
         ] else
           const Center(child: CircularProgressIndicator()),
         const SizedBox(height: 24),
-        const Text(
-          'Đổi sang thanh toán tiền mặt nếu bạn chưa muốn thanh toán luôn',
-          textAlign: TextAlign.center,
-        ),
+        Text(l10n.customerCashHint, textAlign: TextAlign.center),
         if (_notice == _Notice.failed) ..._failure(context),
         if (_notice == _Notice.changed) ..._changed(context),
         const SizedBox(height: 8),
-        _cashButton(),
+        _cashButton(context),
       ],
     );
   }
@@ -481,8 +486,8 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
 
   List<Widget> _changed(BuildContext context) => [
     const SizedBox(height: 8),
-    const Text(
-      'Đơn vừa thay đổi, đang kiểm tra lại',
+    Text(
+      AppLocalizations.of(context)!.customerPayChanged,
       textAlign: TextAlign.center,
     ),
   ];
@@ -490,7 +495,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   List<Widget> _failure(BuildContext context) => [
     const SizedBox(height: 8),
     Text(
-      'Không thực hiện được. Vui lòng thử lại.',
+      AppLocalizations.of(context)!.customerPayActionFailed,
       textAlign: TextAlign.center,
       style: TextStyle(color: Theme.of(context).colorScheme.error),
     ),
@@ -499,39 +504,35 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
   /// The order was cancelled by the 5-minute expiry: ask what to do, while
   /// the 15 minutes last.
   Widget _expiredView(BuildContext context, Order order, DateTime now) {
+    final l10n = AppLocalizations.of(context)!;
     final until = safeRenewableUntil(order);
     final tooLate = _serverSaysTooLate || until == null || now.isAfter(until);
     if (tooLate) {
-      return _message(
-        context,
-        'Đã quá 15 phút. Hãy đặt lại đơn hoặc báo cho quán.',
-        withMenuButton: true,
-      );
+      return _message(context, l10n.customerPayTooLate, withMenuButton: true);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Đơn của bạn đã hết hạn thanh toán. '
-          'Bạn có muốn chuyển sang thanh toán tiền mặt không?',
+          l10n.customerPayExpired,
           style: Theme.of(context).textTheme.titleMedium,
           textAlign: TextAlign.center,
         ),
         if (_notice == _Notice.unavailable) ...[
           const SizedBox(height: 8),
           Text(
-            'Chuyển khoản tạm thời không dùng được',
+            l10n.customerPayTransferUnavailable,
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ],
         if (_notice == _Notice.failed) ..._failure(context),
         const SizedBox(height: 16),
-        _cashButton(),
+        _cashButton(context),
         const SizedBox(height: 8),
         OutlinedButton(
           onPressed: _busy ? null : _renew,
-          child: const Text('Tạo mã QR mới'),
+          child: Text(l10n.customerNewQr),
         ),
       ],
     );
@@ -563,7 +564,7 @@ class _QrBox extends StatelessWidget {
               data: payload,
               size: side - 16,
               backgroundColor: Colors.white,
-              semanticsLabel: 'Mã QR chuyển khoản',
+              semanticsLabel: AppLocalizations.of(context)!.customerQrSemantics,
             ),
           );
         },

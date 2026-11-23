@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import '../../shared/api/order_api_client.dart';
 import '../../shared/api/order_repository.dart';
 import '../../shared/chime.dart';
+import '../../shared/l10n.dart';
+import '../../shared/localized_labels.dart';
 import '../../shared/models/order.dart';
 import '../../shared/money.dart';
+import '../../shared/widgets/language_picker.dart';
 import '../state/staff_credentials.dart';
 import '../widgets/staff_login_dialog.dart';
 import 'export_month_dialog.dart';
@@ -35,14 +38,16 @@ class _WrongCredentials implements Exception {
   const _WrongCredentials();
 }
 
-/// The fixed Vietnamese message staff see for a failed payment action. It is
-/// chosen only by [outcome], so the server's own text is never shown.
-String _payOutcomeText(_PayOutcome outcome) => switch (outcome) {
-  _PayOutcome.disabled => 'Chức năng đang tắt trên máy chủ',
-  _PayOutcome.tooManyTries => 'Thử lại sau.',
-  _PayOutcome.conflict => 'Đơn này đã được xử lý',
-  _ => 'Không thể cập nhật. Thử lại.',
-};
+/// The fixed message staff see for a failed payment action, in the language
+/// of [l10n]. It is chosen only by [outcome], so the server's own text is
+/// never shown.
+String _payOutcomeText(_PayOutcome outcome, AppLocalizations l10n) =>
+    switch (outcome) {
+      _PayOutcome.disabled => l10n.payDisabled,
+      _PayOutcome.tooManyTries => l10n.payTryLater,
+      _PayOutcome.conflict => l10n.payConflict,
+      _ => l10n.payFailed,
+    };
 
 /// The transfer content staff look for in the bank app: `DH` + the last 6
 /// digits of the order id (all of them when fewer; non-digits skipped; an id
@@ -214,17 +219,15 @@ class _OrdersPageState extends State<OrdersPage> {
       }
     }
     if (toAnnounce.isNotEmpty) widget.chime();
+    final l10n = AppLocalizations.of(context)!;
     for (final order in toAnnounce) {
-      final waiting = order.status == OrderStatus.awaiting_payment
-          ? ' — chờ chuyển khoản'
-          : '';
+      final text = order.status == OrderStatus.awaiting_payment
+          ? l10n.orderNewFromWaitingTransfer(order.customerName)
+          : l10n.orderNewFrom(order.customerName);
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(
-            content: Text('Đơn mới từ ${order.customerName}$waiting'),
-            duration: const Duration(seconds: 5),
-          ),
+          SnackBar(content: Text(text), duration: const Duration(seconds: 5)),
         );
     }
     _seenIds.addAll(repo.orders.map((o) => o.id));
@@ -241,13 +244,10 @@ class _OrdersPageState extends State<OrdersPage> {
       await OrderRepository.instance.updateStatus(id, status);
     } on OrderRequestException {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Không thể cập nhật đơn hàng. Thử lại.'),
-          ),
-        );
+        ..showSnackBar(SnackBar(content: Text(l10n.orderUpdateFailed)));
     }
   }
 
@@ -309,7 +309,8 @@ class _OrdersPageState extends State<OrdersPage> {
         } on _WrongCredentials {
           StaffCredentialsHolder.instance.clear();
           credentials = null;
-          promptError = 'Sai mã nhân viên hoặc mật khẩu';
+          if (!mounted) return;
+          promptError = AppLocalizations.of(context)!.staffWrongCredentials;
           continue;
         }
         if (outcome == _PayOutcome.ok) {
@@ -327,7 +328,13 @@ class _OrdersPageState extends State<OrdersPage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(_payOutcomeText(outcome))));
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                _payOutcomeText(outcome, AppLocalizations.of(context)!),
+              ),
+            ),
+          );
         return;
       }
     } finally {
@@ -342,6 +349,7 @@ class _OrdersPageState extends State<OrdersPage> {
   /// actions.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final repo = OrderRepository.instance;
     final orders = repo.orders;
     final now = widget.now();
@@ -356,20 +364,21 @@ class _OrdersPageState extends State<OrdersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Danh sách đơn hàng'),
+        title: Text(l10n.ordersTitle),
         actions: [
           IconButton(
-            tooltip: 'Chỉnh sửa thực đơn',
+            tooltip: l10n.ordersEditMenuTooltip,
             icon: const Icon(Icons.restaurant_menu),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const MenuEditPage()),
             ),
           ),
           IconButton(
-            tooltip: 'Xuất đơn hàng theo tháng',
+            tooltip: l10n.ordersExportTooltip,
             icon: const Icon(Icons.download),
             onPressed: () => showExportMonthDialog(context),
           ),
+          const LanguagePicker(),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
@@ -387,7 +396,7 @@ class _OrdersPageState extends State<OrdersPage> {
         ],
       ),
       body: orders.isEmpty
-          ? const Center(child: Text('Chưa có đơn hàng nào. Đang chờ khách…'))
+          ? Center(child: Text(l10n.ordersEmpty))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: orders.length,
@@ -414,7 +423,7 @@ class _OrdersPageState extends State<OrdersPage> {
 /// `awaiting_payment`, expired and terminal orders have none here.
 ///
 /// Payment buttons follow the order's current status: a live waiting order
-/// gets "Đã nhận chuyển khoản" and "Chuyển sang tiền mặt"; an expired one
+/// gets "Đã nhận chuyển khoản" and "Chuyển sang tiền mặt" (Vietnamese); an expired one
 /// (cancelled by the 5-minute window) gets only "Chuyển sang tiền mặt", with
 /// no time limit for staff — a late transfer is checked and refunded by
 /// hand. Any other order (cash, being prepared, ready, delivered, or
@@ -454,10 +463,11 @@ class _OrderCard extends StatelessWidget {
     _ => null,
   };
 
-  /// Vietnamese text of the main button for the current status.
-  String get _actionLabel => switch (order.status) {
-    OrderStatus.preparing => 'Đánh dấu sẵn sàng',
-    OrderStatus.ready => 'Đánh dấu đã giao',
+  /// Text of the main button for the current status, in the language of
+  /// [l10n].
+  String _actionLabel(AppLocalizations l10n) => switch (order.status) {
+    OrderStatus.preparing => l10n.orderMarkReady,
+    OrderStatus.ready => l10n.orderMarkDelivered,
     _ => '',
   };
 
@@ -466,6 +476,7 @@ class _OrderCard extends StatelessWidget {
   /// or expired transfer, the payment buttons. It reads only its fields.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final next = _nextStatus;
     final expired = _isExpired(order, now);
     final awaiting = order.status == OrderStatus.awaiting_payment && !expired;
@@ -476,7 +487,12 @@ class _OrderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Đơn #${order.id.length > 4 ? order.id.substring(order.id.length - 4) : order.id} — ${order.customerName}',
+              l10n.orderCardTitle(
+                order.id.length > 4
+                    ? order.id.substring(order.id.length - 4)
+                    : order.id,
+                order.customerName,
+              ),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
@@ -489,21 +505,23 @@ class _OrderCard extends StatelessWidget {
               children: [
                 Chip(
                   label: Text(
-                    (expired ? OrderStatus.cancelled : order.status).label,
+                    (expired ? OrderStatus.cancelled : order.status).localized(
+                      l10n,
+                    ),
                   ),
                   visualDensity: VisualDensity.compact,
                 ),
                 Chip(
-                  label: Text(order.paymentMethod.label),
+                  label: Text(order.paymentMethod.localized(l10n)),
                   visualDensity: VisualDensity.compact,
                 ),
                 if (awaiting) ...[
-                  const Text('Chưa thanh toán'),
-                  Text('Nội dung chuyển khoản: ${transferReference(order.id)}'),
+                  Text(l10n.orderUnpaid),
+                  Text(l10n.orderTransferContent(transferReference(order.id))),
                 ],
                 if (expired)
                   Text(
-                    'Hết hạn thanh toán',
+                    l10n.orderPaymentExpired,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -553,13 +571,13 @@ class _OrderCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 Text(
-                  'Tổng: ${formatVnd(order.total)}',
+                  l10n.orderTotal(formatVnd(order.total)),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 if (next != null && !expired)
                   FilledButton(
                     onPressed: () => onChangeStatus(next),
-                    child: Text(_actionLabel),
+                    child: Text(_actionLabel(l10n)),
                   ),
               ],
             ),
@@ -577,13 +595,13 @@ class _OrderCard extends StatelessWidget {
                       onPressed: busy
                           ? null
                           : () => onPaymentAction(PaymentAction.confirm),
-                      child: const Text('Đã nhận chuyển khoản'),
+                      child: Text(l10n.orderConfirmTransferReceived),
                     ),
                   OutlinedButton(
                     onPressed: busy
                         ? null
                         : () => onPaymentAction(PaymentAction.switchToCash),
-                    child: const Text('Chuyển sang tiền mặt'),
+                    child: Text(l10n.orderSwitchToCash),
                   ),
                 ],
               ),

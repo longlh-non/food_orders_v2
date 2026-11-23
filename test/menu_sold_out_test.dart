@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/l10n_app.dart';
+
 import 'package:food_orders/customer/pages/add_food_dialog.dart';
 import 'package:food_orders/customer/pages/menu_page.dart';
 import 'package:food_orders/customer/state/cart.dart';
@@ -61,7 +64,7 @@ Future<void> pump(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(
+    l10nApp(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(textScale)),

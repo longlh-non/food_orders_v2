@@ -36,6 +36,28 @@ enum MenuSaveResult {
   ignored,
 }
 
+/// Why the last save failed. The page turns it into text in the user's
+/// language (this class has no `BuildContext` and holds no wording).
+enum MenuSaveError {
+  /// The server refused the staff ID or password (401).
+  wrongCredentials,
+
+  /// Menu editing is switched off on the server (403).
+  editingDisabled,
+
+  /// Too many wrong attempts (429); see [MenuAdminState.saveErrorWaitSeconds].
+  tooManyTries,
+
+  /// The item is not on the server's menu (404).
+  notFound,
+
+  /// The price is not valid.
+  invalid,
+
+  /// Anything else.
+  other,
+}
+
 /// The restaurant app's copy of the menu for the editing screen.
 ///
 /// Loads the menu with `GET /api/menu` and changes a price or the sold-out
@@ -59,7 +81,8 @@ class MenuAdminState extends ChangeNotifier {
   bool _hasLoaded = false;
   bool _loadFailed = false;
   final _saving = <String>{};
-  String? _saveError;
+  MenuSaveError? _saveError;
+  int? _saveErrorWaitSeconds;
   bool _disposed = false;
 
   /// The menu as last loaded or saved (empty until the first load).
@@ -72,8 +95,11 @@ class MenuAdminState extends ChangeNotifier {
   /// True when the last [load] failed (and nothing was loaded before).
   bool get loadFailed => _loadFailed;
 
-  /// A short Vietnamese message for the last failed save, or null.
-  String? get saveError => _saveError;
+  /// Why the last save failed, or null. The page shows the matching text.
+  MenuSaveError? get saveError => _saveError;
+
+  /// For [MenuSaveError.tooManyTries]: seconds to wait, when the server said.
+  int? get saveErrorWaitSeconds => _saveErrorWaitSeconds;
 
   /// True while item [id] is being saved; its row should be disabled.
   bool isSaving(String id) => _saving.contains(id);
@@ -102,13 +128,14 @@ class MenuAdminState extends ChangeNotifier {
   void clearSaveError() {
     if (_saveError == null) return;
     _saveError = null;
+    _saveErrorWaitSeconds = null;
     _notify();
   }
 
   /// Saves a new [price] (VND, whole number 0 to [maxMenuPrice]) for [id].
   Future<MenuSaveResult> setPrice(String id, int price) {
     if (price < 0 || price > maxMenuPrice) {
-      _saveError = _messageInvalid;
+      _saveError = MenuSaveError.invalid;
       _notify();
       return Future.value(MenuSaveResult.failed);
     }
@@ -131,6 +158,7 @@ class MenuAdminState extends ChangeNotifier {
     if (credentials == null) return MenuSaveResult.needsCredentials;
     _saving.add(id);
     _saveError = null;
+    _saveErrorWaitSeconds = null;
     _notify();
     try {
       final updated = await _admin.updateItem(
@@ -148,37 +176,31 @@ class MenuAdminState extends ChangeNotifier {
         case MenuAdminFailure.wrongCredentials:
           // Forget both so wrong ones aren't sent again; the page asks anew.
           _holder.clear();
-          _saveError = 'Sai mã nhân viên hoặc mật khẩu';
+          _saveError = MenuSaveError.wrongCredentials;
           return MenuSaveResult.needsCredentials;
         case MenuAdminFailure.editingDisabled:
-          _saveError = 'Chức năng sửa thực đơn đang tắt trên máy chủ';
+          _saveError = MenuSaveError.editingDisabled;
         case MenuAdminFailure.tooManyTries:
-          final wait = e.retryAfterSeconds;
-          _saveError = wait == null
-              ? 'Thử sai quá nhiều lần. Vui lòng thử lại sau.'
-              : 'Thử sai quá nhiều lần. Thử lại sau $wait giây.';
+          _saveError = MenuSaveError.tooManyTries;
+          _saveErrorWaitSeconds = e.retryAfterSeconds;
         case MenuAdminFailure.notFound:
-          _saveError = 'Không tìm thấy món này. Hãy tải lại trang.';
+          _saveError = MenuSaveError.notFound;
         case MenuAdminFailure.invalid:
-          _saveError = _messageInvalid;
+          _saveError = MenuSaveError.invalid;
         case MenuAdminFailure.other:
-          _saveError = _messageOther;
+          _saveError = MenuSaveError.other;
       }
       return MenuSaveResult.failed;
     } on Object {
       // Anything else (e.g. credentials the client refuses to send): the row
       // must not stay stuck disabled. No exception text is kept.
-      _saveError = _messageOther;
+      _saveError = MenuSaveError.other;
       return MenuSaveResult.failed;
     } finally {
       _saving.remove(id);
       _notify();
     }
   }
-
-  static const _messageInvalid =
-      'Giá không hợp lệ. Nhập số nguyên từ 0 đến 1.000.000';
-  static const _messageOther = 'Không lưu được. Thử lại.';
 
   /// Notifies unless the state is already disposed (a save can finish after
   /// the page was closed).

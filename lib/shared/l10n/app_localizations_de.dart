@@ -239,4 +239,224 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get menuSaveFailed =>
       'Speichern fehlgeschlagen. Bitte erneut versuchen.';
+
+  @override
+  String get customerMenuTitle => 'Speisekarte';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Die Preise von $count Artikeln im Warenkorb haben sich geändert.',
+      one: 'Der Preis von $count Artikel im Warenkorb hat sich geändert.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Artikel sind nicht mehr auf der Speisekarte und wurden aus dem Warenkorb entfernt.',
+      one:
+          '$count Artikel ist nicht mehr auf der Speisekarte und wurde aus dem Warenkorb entfernt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return 'Bestellung #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return 'Bestellung #$shortId: Zahlungsfrist abgelaufen';
+  }
+
+  @override
+  String get customerMenuLoadFailed =>
+      'Die Speisekarte konnte nicht geladen werden';
+
+  @override
+  String get customerCartTooltip => 'Warenkorb';
+
+  @override
+  String get customerCategoryFood => 'Speisen';
+
+  @override
+  String get customerCategoryDrink => 'Getränke';
+
+  @override
+  String get customerCategorySnack => 'Kleine Gerichte';
+
+  @override
+  String get customerCategoryNibble => 'Snacks';
+
+  @override
+  String get customerCategoryEmpty =>
+      'In dieser Kategorie gibt es noch keine Artikel';
+
+  @override
+  String get customerYourOrders => 'Deine Bestellungen';
+
+  @override
+  String get customerOrderExpired => 'Zahlungsfrist abgelaufen';
+
+  @override
+  String customerAddItem(String name) {
+    return '$name hinzufügen';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return '$names hinzugefügt';
+  }
+
+  @override
+  String get customerSoldOut => 'Ausverkauft';
+
+  @override
+  String get customerCartTitle => 'Dein Warenkorb';
+
+  @override
+  String get customerCartEmpty => 'Dein Warenkorb ist leer.';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / Stück';
+  }
+
+  @override
+  String get customerNameLabel => 'Dein Name';
+
+  @override
+  String get customerNameRequired => 'Bitte gib deinen Namen ein';
+
+  @override
+  String customerCartTotal(String total) {
+    return 'Gesamt: $total';
+  }
+
+  @override
+  String get customerOrderFailed =>
+      'Die Bestellung konnte nicht aufgegeben werden. Bitte erneut versuchen.';
+
+  @override
+  String get customerPlaceOrder => 'Bestellen';
+
+  @override
+  String get customerTransferOff => 'Banküberweisung ist nicht aktiviert';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return 'Bestellung aufgegeben, $name!';
+  }
+
+  @override
+  String get customerAddToppings => 'Toppings hinzufügen';
+
+  @override
+  String get customerAddDrink => 'Getränk hinzufügen';
+
+  @override
+  String get customerChooseDrink => 'Getränk wählen';
+
+  @override
+  String get customerBack => 'Zurück';
+
+  @override
+  String get customerNext => 'Weiter';
+
+  @override
+  String get customerAddButton => 'Hinzufügen';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => 'Bestellung nicht gefunden.';
+
+  @override
+  String get customerPayChecking => 'Zahlung wird geprüft…';
+
+  @override
+  String get customerPayCancelled => 'Deine Bestellung wurde storniert.';
+
+  @override
+  String get customerPayReceived => 'Zahlung erhalten. Vielen Dank!';
+
+  @override
+  String get customerPayCashOrder => 'Deine Bestellung wird bar bezahlt.';
+
+  @override
+  String get customerPayRecheck => 'Erneut prüfen';
+
+  @override
+  String get customerBackToMenu => 'Zurück zur Speisekarte';
+
+  @override
+  String get customerSwitchToCash => 'Auf Barzahlung wechseln';
+
+  @override
+  String get customerPayInstruction =>
+      'Bitte überweise innerhalb von 5 Minuten, damit deine Bestellung erhalten bleibt.';
+
+  @override
+  String customerCountdown(String time) {
+    return 'Noch $time';
+  }
+
+  @override
+  String get customerBank => 'Bank';
+
+  @override
+  String get customerAccountNumber => 'Kontonummer';
+
+  @override
+  String get customerAccountName => 'Kontoinhaber';
+
+  @override
+  String get customerAmount => 'Betrag';
+
+  @override
+  String get customerTransferContent => 'Verwendungszweck';
+
+  @override
+  String get customerQrLoadFailed => 'Der QR-Code konnte nicht geladen werden.';
+
+  @override
+  String get customerCashHint =>
+      'Wechsle zu Barzahlung, wenn du nicht sofort bezahlen möchtest';
+
+  @override
+  String get customerPayChanged =>
+      'Deine Bestellung hat sich geändert, wird erneut geprüft';
+
+  @override
+  String get customerPayActionFailed =>
+      'Das hat nicht geklappt. Bitte erneut versuchen.';
+
+  @override
+  String get customerPayTooLate =>
+      'Es sind mehr als 15 Minuten vergangen. Bitte bestelle erneut oder sprich mit dem Lokal.';
+
+  @override
+  String get customerPayExpired =>
+      'Die Zahlungsfrist für deine Bestellung ist abgelaufen. Möchtest du stattdessen bar bezahlen?';
+
+  @override
+  String get customerPayTransferUnavailable =>
+      'Banküberweisung ist vorübergehend nicht verfügbar';
+
+  @override
+  String get customerNewQr => 'Neuen QR-Code erstellen';
+
+  @override
+  String get customerQrSemantics => 'QR-Code für die Überweisung';
 }

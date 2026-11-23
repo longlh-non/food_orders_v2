@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/l10n.dart';
 import '../../shared/models/menu_item.dart';
 import '../../shared/models/topping.dart';
 import '../../shared/money.dart';
@@ -130,14 +131,15 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
   /// step. It redraws through `setState` when the step or a tick changes.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isLast = _next(_step) == null;
     // A ticked drink step needs a drink before it can finish.
     final canGo = _step != _Step.drink || _drinkId != null;
     return AlertDialog(
       title: Text(switch (_step) {
-        _Step.ask => 'Thêm ${widget.dish.name}',
-        _Step.toppings => 'Thêm topping',
-        _Step.drink => 'Chọn đồ uống',
+        _Step.ask => l10n.customerAddItem(widget.dish.name),
+        _Step.toppings => l10n.customerAddToppings,
+        _Step.drink => l10n.customerChooseDrink,
       }),
       // Scrolls when tall (big text, long lists); the buttons stay visible.
       scrollable: true,
@@ -150,16 +152,16 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
         if (_step == _Step.ask)
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Hủy'),
+            child: Text(l10n.commonCancel),
           )
         else
           TextButton(
             onPressed: () => setState(() => _step = _previous(_step)),
-            child: const Text('Quay lại'),
+            child: Text(l10n.customerBack),
           ),
         FilledButton(
           onPressed: canGo ? _forward : null,
-          child: Text(isLast ? 'Thêm' : 'Tiếp'),
+          child: Text(isLast ? l10n.customerAddButton : l10n.customerNext),
         ),
       ],
     );
@@ -174,7 +176,7 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Thêm topping'),
+          title: Text(AppLocalizations.of(context)!.customerAddToppings),
           value: _wantToppings,
           onChanged: (v) => setState(() => _wantToppings = v ?? false),
         ),
@@ -182,7 +184,7 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Thêm đồ uống'),
+          title: Text(AppLocalizations.of(context)!.customerAddDrink),
           value: _wantDrink,
           onChanged: (v) => setState(() => _wantDrink = v ?? false),
         ),
@@ -214,7 +216,8 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
           ),
         const SizedBox(height: 8),
         Text(
-          '${widget.dish.name}: ${formatVnd(unit)}',
+          AppLocalizations.of(context)!
+              .customerDishPrice(widget.dish.name, formatVnd(unit)),
           style: Theme.of(context).textTheme.titleSmall,
         ),
       ],
@@ -236,7 +239,11 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
             value: d.id,
             enabled: d.available,
             title: Text(d.name),
-            subtitle: Text(d.available ? formatVnd(d.price) : 'Hết hàng'),
+            subtitle: Text(
+              d.available
+                  ? formatVnd(d.price)
+                  : AppLocalizations.of(context)!.customerSoldOut,
+            ),
           ),
       ],
     ),

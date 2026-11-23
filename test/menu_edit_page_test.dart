@@ -13,6 +13,8 @@ import 'package:food_orders/shared/api/order_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'helpers/l10n_app.dart';
+
 // Obviously fake test values.
 const staffId = 'test-staff';
 const password = 'test-password-1234';
@@ -85,7 +87,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MaterialApp(
+      l10nApp(
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(textScale)),
@@ -129,7 +131,7 @@ void main() {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(home: MenuEditPage(state: state)));
+    await tester.pumpWidget(l10nApp(home: MenuEditPage(state: state)));
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
     gate.complete(json([item('a', 'Trà đá')]));
@@ -352,7 +354,7 @@ void main() {
       addTearDown(
         () => OrderRepository.instance.setApiForTest(OrderApiClient()),
       );
-      await tester.pumpWidget(MaterialApp(home: OrdersPage(chime: () {})));
+      await tester.pumpWidget(l10nApp(home: OrdersPage(chime: () {})));
       expect(find.byTooltip('Chỉnh sửa thực đơn'), findsOneWidget);
       // The export and bell buttons are still there.
       expect(find.byTooltip('Xuất đơn hàng theo tháng'), findsOneWidget);
@@ -365,7 +367,7 @@ void main() {
       // The page makes its own client; under flutter test it answers 400, so
       // the load fails and the page settles on its error state.
       await tester.pumpAndSettle();
-      await tester.pageBack();
+      await goBack(tester);
       await tester.pumpAndSettle();
       expect(find.byType(MenuEditPage), findsNothing);
     });

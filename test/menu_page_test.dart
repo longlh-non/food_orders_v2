@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/l10n_app.dart';
+
 import 'package:food_orders/customer/pages/menu_page.dart';
 import 'package:food_orders/customer/pages/payment_qr_page.dart';
 import 'package:food_orders/customer/state/cart.dart';
@@ -78,7 +81,7 @@ Future<void> pumpPage(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(
+    l10nApp(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(textScale)),
@@ -461,7 +464,7 @@ void main() {
       await tester.tap(find.byTooltip('Giỏ hàng'));
       await tester.pumpAndSettle();
       expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
-      await tester.pageBack();
+      await goBack(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('Trà đá'), findsOneWidget);
@@ -556,7 +559,7 @@ void main() {
           expect(find.byType(PaymentQrPage), findsOneWidget);
           expect(find.text('Chuyển sang tiền mặt'), findsOneWidget);
           // Leave before the page's one-second timer matters.
-          await tester.pageBack();
+          await goBack(tester);
           await tester.pumpAndSettle();
         });
 
@@ -578,7 +581,7 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 400));
           expect(find.text('Tạo mã QR mới'), findsOneWidget);
-          await tester.pageBack();
+          await goBack(tester);
           await tester.pumpAndSettle();
         });
 
@@ -915,7 +918,7 @@ void main() {
     ) async {
       var taps = 0;
       await tester.pumpWidget(
-        MaterialApp(
+        l10nApp(
           home: Scaffold(
             body: Row(
               children: [
@@ -1029,7 +1032,7 @@ void main() {
       expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
       expect(find.byType(BottomAppBar), findsNothing, reason: 'menu only');
 
-      await tester.pageBack();
+      await goBack(tester);
       await tester.pumpAndSettle();
       expect(find.text('Trà đá'), findsOneWidget);
     });

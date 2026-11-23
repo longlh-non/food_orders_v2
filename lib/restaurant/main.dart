@@ -33,7 +33,8 @@ class RestaurantApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: LocaleController.instance,
       builder: (context, _) => MaterialApp(
-        title: 'Đặt Món — Nhà hàng',
+        onGenerateTitle: (context) =>
+            AppLocalizations.of(context)!.appTitleRestaurant,
         theme: restaurantTheme(),
         locale: LocaleController.instance.locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,

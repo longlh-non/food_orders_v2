@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/l10n_app.dart';
+
 import 'package:food_orders/customer/pages/cart_page.dart';
 import 'package:food_orders/customer/state/cart.dart';
 import 'package:food_orders/customer/state/menu_state.dart';
@@ -270,7 +273,7 @@ void main() {
         ..add(traDa)
         ..add(xoi, toppings: [cha, trung]);
 
-      await tester.pumpWidget(const MaterialApp(home: CartPage()));
+      await tester.pumpWidget(l10nApp(home: const CartPage()));
 
       expect(find.text('+ Thêm chả   + Thêm trứng tráng'), findsOneWidget);
       expect(find.text('43.000 VNĐ / món'), findsOneWidget);

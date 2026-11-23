@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/l10n.dart';
 import '../api/export_client.dart';
 import '../download/save_file.dart' as download;
 import '../state/staff_credentials.dart';
@@ -22,13 +23,14 @@ List<String> recentMonths(DateTime now) => [
     }(),
 ];
 
-/// What the "Loại báo cáo" dropdown offers: the label, the file name and the
-/// MIME type for each [ExportReport].
+/// What the report dropdown offers: the label (in the language of an
+/// [AppLocalizations]), the file name and the MIME type for each
+/// [ExportReport]. File names stay as the server and the owner know them.
 extension on ExportReport {
-  String get label => switch (this) {
-    ExportReport.summary => 'Báo cáo tổng hợp theo ngày (Excel)',
-    ExportReport.detail => 'Chi tiết từng đơn trong tháng (Excel)',
-    ExportReport.lines => 'Danh sách dòng món (CSV)',
+  String label(AppLocalizations l10n) => switch (this) {
+    ExportReport.summary => l10n.exportSummaryOption,
+    ExportReport.detail => l10n.exportDetailOption,
+    ExportReport.lines => l10n.exportLinesOption,
   };
 
   String fileName(String month) => switch (this) {
@@ -93,7 +95,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
   );
   var _report = ExportReport.summary;
   var _busy = false;
-  String? _error;
+  _ExportError? _error;
 
   @override
   void initState() {
@@ -117,9 +119,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
     if (!credentials.isSendable) {
       // Checked here: a browser would refuse such a header and it would
       // look like a network failure.
-      setState(
-        () => _error = 'Chỉ dùng chữ không dấu, số và ký hiệu thông thường',
-      );
+      setState(() => _error = const _ExportError(_ExportErrorKind.plainChars));
       return;
     }
     setState(() {
@@ -146,18 +146,18 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             StaffCredentialsHolder.instance.clear();
             _id.clear();
             _password.clear();
-            _error = 'Sai mã nhân viên hoặc mật khẩu';
+            _error = const _ExportError(_ExportErrorKind.wrongCredentials);
           case ExportFailure.disabled:
-            _error = 'Chức năng xuất dữ liệu đang tắt trên máy chủ';
+            _error = const _ExportError(_ExportErrorKind.disabled);
           case ExportFailure.tooManyTries:
-            final wait = e.retryAfterSeconds;
-            _error = wait == null
-                ? 'Thử sai quá nhiều lần. Vui lòng thử lại sau.'
-                : 'Thử sai quá nhiều lần. Thử lại sau $wait giây.';
+            _error = _ExportError(
+              _ExportErrorKind.tooManyTries,
+              waitSeconds: e.retryAfterSeconds,
+            );
           case ExportFailure.notConfigured:
-            _error = 'Chưa cài đặt thông tin quán trên máy chủ';
+            _error = const _ExportError(_ExportErrorKind.notConfigured);
           case ExportFailure.other:
-            _error = 'Không thể xuất dữ liệu. Thử lại.';
+            _error = const _ExportError(_ExportErrorKind.other);
         }
       });
     } on Object {
@@ -166,19 +166,20 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = 'Không thể xuất dữ liệu. Thử lại.';
+        _error = const _ExportError(_ExportErrorKind.other);
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final canDownload =
         !_busy &&
         _id.text.trim().isNotEmpty &&
         _password.text.trim().isNotEmpty;
     return AlertDialog(
-      title: const Text('Xuất đơn hàng theo tháng'),
+      title: Text(l10n.exportTitle),
       // Scrolls at large text; the buttons stay visible.
       scrollable: true,
       content: Column(
@@ -187,7 +188,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
         children: [
           DropdownButtonFormField<String>(
             initialValue: _month,
-            decoration: const InputDecoration(labelText: 'Tháng'),
+            decoration: InputDecoration(labelText: l10n.exportMonthLabel),
             items: [
               for (final m in widget.months)
                 DropdownMenuItem(value: m, child: Text(m)),
@@ -200,14 +201,14 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
           DropdownButtonFormField<ExportReport>(
             initialValue: _report,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Loại báo cáo'),
+            decoration: InputDecoration(labelText: l10n.exportReportLabel),
             items: [
               for (final r in [
                 ExportReport.summary,
                 ExportReport.detail,
                 ExportReport.lines,
               ])
-                DropdownMenuItem(value: r, child: Text(r.label)),
+                DropdownMenuItem(value: r, child: Text(r.label(l10n))),
             ],
             onChanged: _busy
                 ? null
@@ -222,7 +223,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             // live in memory only, not in every device's password manager.
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Mã nhân viên'),
+            decoration: InputDecoration(labelText: l10n.staffIdLabel),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -232,7 +233,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             autocorrect: false,
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Mật khẩu nhân viên'),
+            decoration: InputDecoration(labelText: l10n.staffPasswordLabel),
             onSubmitted: (_) {
               if (canDownload) _download();
             },
@@ -242,7 +243,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             Semantics(
               liveRegion: true,
               child: Text(
-                error,
+                error.text(l10n),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
@@ -252,13 +253,46 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Hủy'),
+          child: Text(l10n.commonCancel),
         ),
         FilledButton(
           onPressed: canDownload ? _download : null,
-          child: const Text('Tải xuống'),
+          child: Text(l10n.commonDownload),
         ),
       ],
     );
   }
+}
+
+/// Which error the dialog shows. Kept as data (not text) so a language switch
+/// while it is on screen re-translates it.
+enum _ExportErrorKind {
+  plainChars,
+  wrongCredentials,
+  disabled,
+  tooManyTries,
+  notConfigured,
+  other,
+}
+
+class _ExportError {
+  const _ExportError(this.kind, {this.waitSeconds});
+
+  final _ExportErrorKind kind;
+
+  /// Seconds to wait, for [_ExportErrorKind.tooManyTries] when the server said.
+  final int? waitSeconds;
+
+  /// The message in the language of [l10n].
+  String text(AppLocalizations l10n) => switch (kind) {
+    _ExportErrorKind.plainChars => l10n.staffPlainCharsError,
+    _ExportErrorKind.wrongCredentials => l10n.staffWrongCredentials,
+    _ExportErrorKind.disabled => l10n.exportDisabled,
+    _ExportErrorKind.tooManyTries =>
+      waitSeconds == null
+          ? l10n.tooManyTriesLater
+          : l10n.tooManyTriesWait(waitSeconds!),
+    _ExportErrorKind.notConfigured => l10n.exportNotConfigured,
+    _ExportErrorKind.other => l10n.exportFailed,
+  };
 }

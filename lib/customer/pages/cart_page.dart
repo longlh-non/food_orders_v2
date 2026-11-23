@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../shared/api/order_api_client.dart';
 import '../../shared/api/order_repository.dart';
+import '../../shared/l10n.dart';
 import '../../shared/models/order.dart';
 import '../../shared/money.dart';
 import '../api/payment_client.dart';
+import '../../shared/localized_labels.dart';
 import '../state/cart.dart';
 import '../state/my_orders.dart';
 import 'payment_qr_page.dart';
@@ -97,7 +99,9 @@ class _CartPageState extends State<CartPage> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tên của bạn')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.customerNameRequired),
+        ),
       );
       return;
     }
@@ -157,7 +161,11 @@ class _CartPageState extends State<CartPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đặt hàng thành công, ${order.customerName}!')),
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!.customerOrderPlaced(order.customerName),
+        ),
+      ),
     );
     Navigator.of(context).pop();
   }
@@ -168,13 +176,14 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final cart = Cart.instance;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Giỏ hàng của bạn')),
+      appBar: AppBar(title: Text(l10n.customerCartTitle)),
       body: ListenableBuilder(
         listenable: cart,
         builder: (context, _) {
           if (cart.isEmpty) {
-            return const Center(child: Text('Giỏ hàng trống.'));
+            return Center(child: Text(l10n.customerCartEmpty));
           }
           // One scrollable list for everything (lines, name, total, button,
           // failure text), so nothing can overflow at large text sizes. The
@@ -194,7 +203,9 @@ class _CartPageState extends State<CartPage> {
                           Text(
                             line.toppings.map((t) => '+ ${t.name}').join('   '),
                           ),
-                        Text('${formatVnd(line.unitPrice)} / món'),
+                        Text(
+                          l10n.customerPricePerItem(formatVnd(line.unitPrice)),
+                        ),
                       ],
                     ),
                     trailing: Row(
@@ -217,9 +228,9 @@ class _CartPageState extends State<CartPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Tên của bạn',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.customerNameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
@@ -228,7 +239,7 @@ class _CartPageState extends State<CartPage> {
               // Total above a full-width button (not side by side): at large
               // text "Đặt hàng" alone is wider than a phone.
               Text(
-                'Tổng cộng: ${formatVnd(cart.total)}',
+                l10n.customerCartTotal(formatVnd(cart.total)),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -241,7 +252,7 @@ class _CartPageState extends State<CartPage> {
                     key: _failureKey,
                     liveRegion: true,
                     child: Text(
-                      'Không thể đặt hàng. Vui lòng thử lại.',
+                      l10n.customerOrderFailed,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -255,7 +266,7 @@ class _CartPageState extends State<CartPage> {
                         dimension: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Đặt hàng'),
+                    : Text(l10n.customerPlaceOrder),
               ),
             ],
           );
@@ -266,6 +277,7 @@ class _CartPageState extends State<CartPage> {
 
   /// The two choices. Transfer is disabled until the server says it is set up.
   Widget _paymentChoice() {
+    final l10n = AppLocalizations.of(context)!;
     final enabled = _transferEnabled == true;
     return RadioGroup<PaymentMethod>(
       groupValue: _method,
@@ -278,14 +290,14 @@ class _CartPageState extends State<CartPage> {
         children: [
           RadioListTile<PaymentMethod>(
             value: PaymentMethod.cash,
-            title: Text(PaymentMethod.cash.label),
+            title: Text(PaymentMethod.cash.localized(l10n)),
           ),
           RadioListTile<PaymentMethod>(
             value: PaymentMethod.bank_transfer,
             enabled: enabled,
-            title: Text(PaymentMethod.bank_transfer.label),
+            title: Text(PaymentMethod.bank_transfer.localized(l10n)),
             subtitle: _transferEnabled == false
-                ? const Text('Chuyển khoản chưa được bật')
+                ? Text(l10n.customerTransferOff)
                 : null,
           ),
         ],

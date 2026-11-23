@@ -10,6 +10,8 @@ import 'package:food_orders/shared/api/order_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'helpers/l10n_app.dart';
+
 // Obviously fake test values.
 const staffId = 'test-staff';
 const token = 'test-password-1234';
@@ -184,7 +186,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp(
+        l10nApp(
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
                 .copyWith(textScaler: TextScaler.linear(textScale)),
@@ -540,7 +542,7 @@ void main() {
     testWidgets('a failing browser download shows the error, not a stuck '
         'dialog', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        l10nApp(
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
@@ -622,7 +624,7 @@ void main() {
     tester,
   ) async {
     OrderRepository.instance.setOrdersForTest(const []);
-    await tester.pumpWidget(const MaterialApp(home: OrdersPage()));
+    await tester.pumpWidget(l10nApp(home: const OrdersPage()));
 
     await tester.tap(find.byTooltip('Xuất đơn hàng theo tháng'));
     await tester.pumpAndSettle();

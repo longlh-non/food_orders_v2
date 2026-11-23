@@ -12,6 +12,8 @@ import 'package:food_orders/shared/money.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'helpers/l10n_app.dart';
+
 Order orderWith(List<OrderItem> items, {String id = 'order-0001'}) => Order(
   id: id,
   customerName: 'An',
@@ -33,7 +35,7 @@ Future<void> pumpOrders(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(
+    l10nApp(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(textScale)),

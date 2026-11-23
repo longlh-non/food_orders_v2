@@ -227,4 +227,217 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get menuSaveFailed => 'Không lưu được. Thử lại.';
+
+  @override
+  String get customerMenuTitle => 'Thực đơn';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Giá của $count món trong giỏ hàng đã thay đổi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return 'Đơn #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return 'Đơn #$shortId: hết hạn thanh toán';
+  }
+
+  @override
+  String get customerMenuLoadFailed => 'Không tải được thực đơn';
+
+  @override
+  String get customerCartTooltip => 'Giỏ hàng';
+
+  @override
+  String get customerCategoryFood => 'Đồ ăn';
+
+  @override
+  String get customerCategoryDrink => 'Đồ uống';
+
+  @override
+  String get customerCategorySnack => 'Ăn nhẹ';
+
+  @override
+  String get customerCategoryNibble => 'Ăn vặt';
+
+  @override
+  String get customerCategoryEmpty => 'Chưa có món nào trong mục này';
+
+  @override
+  String get customerYourOrders => 'Đơn của bạn';
+
+  @override
+  String get customerOrderExpired => 'Hết hạn thanh toán';
+
+  @override
+  String customerAddItem(String name) {
+    return 'Thêm $name';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return 'Đã thêm $names';
+  }
+
+  @override
+  String get customerSoldOut => 'Hết hàng';
+
+  @override
+  String get customerCartTitle => 'Giỏ hàng của bạn';
+
+  @override
+  String get customerCartEmpty => 'Giỏ hàng trống.';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / món';
+  }
+
+  @override
+  String get customerNameLabel => 'Tên của bạn';
+
+  @override
+  String get customerNameRequired => 'Vui lòng nhập tên của bạn';
+
+  @override
+  String customerCartTotal(String total) {
+    return 'Tổng cộng: $total';
+  }
+
+  @override
+  String get customerOrderFailed => 'Không thể đặt hàng. Vui lòng thử lại.';
+
+  @override
+  String get customerPlaceOrder => 'Đặt hàng';
+
+  @override
+  String get customerTransferOff => 'Chuyển khoản chưa được bật';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return 'Đặt hàng thành công, $name!';
+  }
+
+  @override
+  String get customerAddToppings => 'Thêm topping';
+
+  @override
+  String get customerAddDrink => 'Thêm đồ uống';
+
+  @override
+  String get customerChooseDrink => 'Chọn đồ uống';
+
+  @override
+  String get customerBack => 'Quay lại';
+
+  @override
+  String get customerNext => 'Tiếp';
+
+  @override
+  String get customerAddButton => 'Thêm';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => 'Không tìm thấy đơn hàng.';
+
+  @override
+  String get customerPayChecking => 'Đang kiểm tra thanh toán…';
+
+  @override
+  String get customerPayCancelled => 'Đơn của bạn đã bị hủy.';
+
+  @override
+  String get customerPayReceived => 'Đã nhận thanh toán. Cảm ơn bạn!';
+
+  @override
+  String get customerPayCashOrder =>
+      'Đơn của bạn sẽ được thanh toán bằng tiền mặt.';
+
+  @override
+  String get customerPayRecheck => 'Kiểm tra lại';
+
+  @override
+  String get customerBackToMenu => 'Về menu';
+
+  @override
+  String get customerSwitchToCash => 'Chuyển sang tiền mặt';
+
+  @override
+  String get customerPayInstruction =>
+      'Hãy chuyển khoản trong vòng 5 phút để giữ đơn.';
+
+  @override
+  String customerCountdown(String time) {
+    return 'Còn lại $time';
+  }
+
+  @override
+  String get customerBank => 'Ngân hàng';
+
+  @override
+  String get customerAccountNumber => 'Số tài khoản';
+
+  @override
+  String get customerAccountName => 'Chủ tài khoản';
+
+  @override
+  String get customerAmount => 'Số tiền';
+
+  @override
+  String get customerTransferContent => 'Nội dung chuyển khoản';
+
+  @override
+  String get customerQrLoadFailed => 'Không tải được mã QR.';
+
+  @override
+  String get customerCashHint =>
+      'Đổi sang thanh toán tiền mặt nếu bạn chưa muốn thanh toán luôn';
+
+  @override
+  String get customerPayChanged => 'Đơn vừa thay đổi, đang kiểm tra lại';
+
+  @override
+  String get customerPayActionFailed =>
+      'Không thực hiện được. Vui lòng thử lại.';
+
+  @override
+  String get customerPayTooLate =>
+      'Đã quá 15 phút. Hãy đặt lại đơn hoặc báo cho quán.';
+
+  @override
+  String get customerPayExpired =>
+      'Đơn của bạn đã hết hạn thanh toán. Bạn có muốn chuyển sang thanh toán tiền mặt không?';
+
+  @override
+  String get customerPayTransferUnavailable =>
+      'Chuyển khoản tạm thời không dùng được';
+
+  @override
+  String get customerNewQr => 'Tạo mã QR mới';
+
+  @override
+  String get customerQrSemantics => 'Mã QR chuyển khoản';
 }

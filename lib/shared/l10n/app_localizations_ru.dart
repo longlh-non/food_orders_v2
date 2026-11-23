@@ -238,4 +238,223 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get menuSaveFailed => 'Не удалось сохранить. Повторите попытку.';
+
+  @override
+  String get customerMenuTitle => 'Меню';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Цены $count товара в корзине изменились.',
+      many: 'Цены $count товаров в корзине изменились.',
+      few: 'Цены $count товаров в корзине изменились.',
+      one: 'Цена $count товара в корзине изменилась.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count блюда больше нет в меню, оно удалено из корзины.',
+      many: '$count блюд больше нет в меню, они удалены из корзины.',
+      few: '$count блюд больше нет в меню, они удалены из корзины.',
+      one: '$count блюда больше нет в меню, оно удалено из корзины.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return 'Заказ #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return 'Заказ #$shortId: время оплаты истекло';
+  }
+
+  @override
+  String get customerMenuLoadFailed => 'Не удалось загрузить меню';
+
+  @override
+  String get customerCartTooltip => 'Корзина';
+
+  @override
+  String get customerCategoryFood => 'Еда';
+
+  @override
+  String get customerCategoryDrink => 'Напитки';
+
+  @override
+  String get customerCategorySnack => 'Закуски';
+
+  @override
+  String get customerCategoryNibble => 'Перекусы';
+
+  @override
+  String get customerCategoryEmpty => 'В этой категории пока нет блюд';
+
+  @override
+  String get customerYourOrders => 'Ваши заказы';
+
+  @override
+  String get customerOrderExpired => 'Время оплаты истекло';
+
+  @override
+  String customerAddItem(String name) {
+    return 'Добавить: $name';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return 'Добавлено: $names';
+  }
+
+  @override
+  String get customerSoldOut => 'Нет в наличии';
+
+  @override
+  String get customerCartTitle => 'Ваша корзина';
+
+  @override
+  String get customerCartEmpty => 'Корзина пуста.';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / шт.';
+  }
+
+  @override
+  String get customerNameLabel => 'Ваше имя';
+
+  @override
+  String get customerNameRequired => 'Пожалуйста, введите ваше имя';
+
+  @override
+  String customerCartTotal(String total) {
+    return 'Итого: $total';
+  }
+
+  @override
+  String get customerOrderFailed =>
+      'Не удалось оформить заказ. Попробуйте ещё раз.';
+
+  @override
+  String get customerPlaceOrder => 'Оформить заказ';
+
+  @override
+  String get customerTransferOff => 'Банковский перевод не включён';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return 'Заказ оформлен, $name!';
+  }
+
+  @override
+  String get customerAddToppings => 'Добавить топпинги';
+
+  @override
+  String get customerAddDrink => 'Добавить напиток';
+
+  @override
+  String get customerChooseDrink => 'Выберите напиток';
+
+  @override
+  String get customerBack => 'Назад';
+
+  @override
+  String get customerNext => 'Далее';
+
+  @override
+  String get customerAddButton => 'Добавить';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => 'Заказ не найден.';
+
+  @override
+  String get customerPayChecking => 'Проверяем оплату…';
+
+  @override
+  String get customerPayCancelled => 'Ваш заказ отменён.';
+
+  @override
+  String get customerPayReceived => 'Оплата получена. Спасибо!';
+
+  @override
+  String get customerPayCashOrder => 'Ваш заказ будет оплачен наличными.';
+
+  @override
+  String get customerPayRecheck => 'Проверить снова';
+
+  @override
+  String get customerBackToMenu => 'Назад в меню';
+
+  @override
+  String get customerSwitchToCash => 'Перейти на оплату наличными';
+
+  @override
+  String get customerPayInstruction =>
+      'Переведите деньги в течение 5 минут, чтобы сохранить заказ.';
+
+  @override
+  String customerCountdown(String time) {
+    return 'Осталось $time';
+  }
+
+  @override
+  String get customerBank => 'Банк';
+
+  @override
+  String get customerAccountNumber => 'Номер счёта';
+
+  @override
+  String get customerAccountName => 'Владелец счёта';
+
+  @override
+  String get customerAmount => 'Сумма';
+
+  @override
+  String get customerTransferContent => 'Назначение платежа';
+
+  @override
+  String get customerQrLoadFailed => 'Не удалось загрузить QR-код.';
+
+  @override
+  String get customerCashHint =>
+      'Перейдите на оплату наличными, если не хотите платить сейчас';
+
+  @override
+  String get customerPayChanged =>
+      'Ваш заказ только что изменился, проверяем снова';
+
+  @override
+  String get customerPayActionFailed => 'Не получилось. Попробуйте ещё раз.';
+
+  @override
+  String get customerPayTooLate =>
+      'Прошло более 15 минут. Оформите заказ заново или сообщите в заведение.';
+
+  @override
+  String get customerPayExpired =>
+      'Время оплаты вашего заказа истекло. Хотите заплатить наличными?';
+
+  @override
+  String get customerPayTransferUnavailable =>
+      'Банковский перевод временно недоступен';
+
+  @override
+  String get customerNewQr => 'Создать новый QR-код';
+
+  @override
+  String get customerQrSemantics => 'QR-код для банковского перевода';
 }

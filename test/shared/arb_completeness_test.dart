@@ -45,6 +45,25 @@ void main() {
     }
   });
 
+  test('every language uses exactly the placeholder names of Vietnamese', () {
+    final vi = _read(files.firstWhere((f) => f.path.endsWith('app_vi.arb')));
+    // `{name}` and the leading name of `{count, plural, ...}`; the words
+    // inside plural/select branches (one, other, ...) are followed by `{`.
+    final holders = RegExp(r'\{(\w+)(?=[,}])');
+    Set<String> namesIn(String text) =>
+        holders.allMatches(text).map((m) => m[1]!).toSet();
+    for (final file in files) {
+      final arb = _read(file);
+      for (final key in _messageKeys(vi)) {
+        expect(
+          namesIn(arb[key] as String),
+          namesIn(vi[key] as String),
+          reason: '${file.path} $key',
+        );
+      }
+    }
+  });
+
   test('no translation is empty and every one keeps its placeholders', () {
     final vi = _read(files.firstWhere((f) => f.path.endsWith('app_vi.arb')));
     final holders = RegExp(r'\{(\w+)[,}]');

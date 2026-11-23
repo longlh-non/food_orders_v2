@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/api/order_api_client.dart';
+import '../../shared/l10n.dart';
 import '../../shared/models/menu_item.dart';
 import '../../shared/money.dart';
 import '../api/menu_admin_client.dart';
@@ -66,9 +67,25 @@ class _MenuEditPageState extends State<MenuEditPage> {
       if (result != MenuSaveResult.needsCredentials || !mounted) return;
       // 401: the state already cleared the holder. The same text shows in
       // the dialog, so hide the banner copy.
-      initialError = _state.saveError;
+      initialError = _saveErrorText(AppLocalizations.of(context)!);
       _state.clearSaveError();
     }
+  }
+
+  /// The message for the state's current save error, in the language of
+  /// [l10n]; null when there is none.
+  String? _saveErrorText(AppLocalizations l10n) {
+    final wait = _state.saveErrorWaitSeconds;
+    return switch (_state.saveError) {
+      null => null,
+      MenuSaveError.wrongCredentials => l10n.staffWrongCredentials,
+      MenuSaveError.editingDisabled => l10n.menuEditingDisabled,
+      MenuSaveError.tooManyTries =>
+        wait == null ? l10n.tooManyTriesLater : l10n.tooManyTriesWait(wait),
+      MenuSaveError.notFound => l10n.menuItemNotFound,
+      MenuSaveError.invalid => l10n.menuPriceInvalid,
+      MenuSaveError.other => l10n.menuSaveFailed,
+    };
   }
 
   /// Asks for a new price for [item], then saves it.
@@ -85,8 +102,9 @@ class _MenuEditPageState extends State<MenuEditPage> {
   /// Retry, an empty message, or the list with an error banner on top.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Chỉnh sửa thực đơn')),
+      appBar: AppBar(title: Text(l10n.menuEditTitle)),
       body: ListenableBuilder(
         listenable: _state,
         builder: (context, _) {
@@ -98,14 +116,11 @@ class _MenuEditPageState extends State<MenuEditPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Không tải được thực đơn.',
-                        textAlign: TextAlign.center,
-                      ),
+                      Text(l10n.menuLoadFailed, textAlign: TextAlign.center),
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _state.load,
-                        child: const Text('Thử lại'),
+                        child: Text(l10n.commonRetry),
                       ),
                     ],
                   ),
@@ -115,12 +130,12 @@ class _MenuEditPageState extends State<MenuEditPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (_state.items.isEmpty) {
-            return const Center(child: Text('Thực đơn đang trống.'));
+            return Center(child: Text(l10n.menuEmpty));
           }
           return ListView(
             padding: const EdgeInsets.all(8),
             children: [
-              if (_state.saveError case final error?)
+              if (_saveErrorText(l10n) case final error?)
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: Semantics(
@@ -169,10 +184,14 @@ class _MenuRow extends StatelessWidget {
   /// A list tile whose trailing side holds the two controls.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListTile(
       title: Text(item.name),
       subtitle: Text(
-        '${formatVnd(item.price)} · ${item.available ? 'Còn hàng' : 'Hết hàng'}',
+        l10n.menuItemSubtitle(
+          formatVnd(item.price),
+          item.available ? l10n.menuInStock : l10n.menuSoldOut,
+        ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -191,12 +210,12 @@ class _MenuRow extends StatelessWidget {
             )
           else
             IconButton(
-              tooltip: 'Sửa giá ${item.name}',
+              tooltip: l10n.menuEditPriceTooltip(item.name),
               icon: const Icon(Icons.edit),
               onPressed: onEditPrice,
             ),
           Semantics(
-            label: 'Còn hàng: ${item.name}',
+            label: l10n.menuInStockSemantics(item.name),
             child: Switch(
               value: item.available,
               onChanged: saving ? null : onAvailable,
@@ -238,7 +257,9 @@ class _PriceDialogState extends State<_PriceDialog> {
   void _confirm() {
     final price = parseMenuPrice(_controller.text);
     if (price == null) {
-      setState(() => _error = 'Nhập số nguyên từ 0 đến 1.000.000');
+      setState(
+        () => _error = AppLocalizations.of(context)!.menuPriceRangeError,
+      );
       return;
     }
     Navigator.of(context).pop(price);
@@ -247,22 +268,26 @@ class _PriceDialogState extends State<_PriceDialog> {
   /// A scrollable dialog (fits large text) with one numeric field.
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: Text('Sửa giá ${widget.item.name}'),
+      title: Text(l10n.menuEditPriceTitle(widget.item.name)),
       scrollable: true,
       content: TextField(
         controller: _controller,
         autofocus: true,
         keyboardType: TextInputType.number,
-        decoration: InputDecoration(labelText: 'Giá (VNĐ)', errorText: _error),
+        decoration: InputDecoration(
+          labelText: l10n.menuPriceLabel,
+          errorText: _error,
+        ),
         onSubmitted: (_) => _confirm(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Hủy'),
+          child: Text(l10n.commonCancel),
         ),
-        FilledButton(onPressed: _confirm, child: const Text('Lưu')),
+        FilledButton(onPressed: _confirm, child: Text(l10n.commonSave)),
       ],
     );
   }

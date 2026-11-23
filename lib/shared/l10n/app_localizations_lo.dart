@@ -225,4 +225,214 @@ class AppLocalizationsLo extends AppLocalizations {
 
   @override
   String get menuSaveFailed => 'ບໍ່ສາມາດບັນທຶກໄດ້. ລອງໃໝ່.';
+
+  @override
+  String get customerMenuTitle => 'ເມນູ';
+
+  @override
+  String customerCartPriceChanged(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ລາຄາຂອງ $count ລາຍການໃນກະຕ່າປ່ຽນແປງແລ້ວ.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerCartRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ລາຍການບໍ່ຢູ່ໃນເມນູແລ້ວ ແລະ ຖືກເອົາອອກຈາກກະຕ່າ.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String customerOrderStatusSnack(String shortId, String status) {
+    return 'ຄຳສັ່ງ #$shortId: $status';
+  }
+
+  @override
+  String customerOrderExpiredSnack(String shortId) {
+    return 'ຄຳສັ່ງ #$shortId: ໝົດເວລາຊຳລະເງິນ';
+  }
+
+  @override
+  String get customerMenuLoadFailed => 'ບໍ່ສາມາດໂຫຼດເມນູໄດ້';
+
+  @override
+  String get customerCartTooltip => 'ກະຕ່າ';
+
+  @override
+  String get customerCategoryFood => 'ອາຫານ';
+
+  @override
+  String get customerCategoryDrink => 'ເຄື່ອງດື່ມ';
+
+  @override
+  String get customerCategorySnack => 'ອາຫານເບົາ';
+
+  @override
+  String get customerCategoryNibble => 'ຂອງກິນຫຼິ້ນ';
+
+  @override
+  String get customerCategoryEmpty => 'ຍັງບໍ່ມີລາຍການໃນໝວດນີ້';
+
+  @override
+  String get customerYourOrders => 'ຄຳສັ່ງຂອງທ່ານ';
+
+  @override
+  String get customerOrderExpired => 'ໝົດເວລາຊຳລະເງິນ';
+
+  @override
+  String customerAddItem(String name) {
+    return 'ເພີ່ມ $name';
+  }
+
+  @override
+  String customerAdded(String names) {
+    return 'ເພີ່ມ $names ແລ້ວ';
+  }
+
+  @override
+  String get customerSoldOut => 'ໝົດແລ້ວ';
+
+  @override
+  String get customerCartTitle => 'ກະຕ່າຂອງທ່ານ';
+
+  @override
+  String get customerCartEmpty => 'ກະຕ່າຫວ່າງເປົ່າ.';
+
+  @override
+  String customerPricePerItem(String price) {
+    return '$price / ລາຍການ';
+  }
+
+  @override
+  String get customerNameLabel => 'ຊື່ຂອງທ່ານ';
+
+  @override
+  String get customerNameRequired => 'ກະລຸນາໃສ່ຊື່ຂອງທ່ານ';
+
+  @override
+  String customerCartTotal(String total) {
+    return 'ລວມທັງໝົດ: $total';
+  }
+
+  @override
+  String get customerOrderFailed => 'ບໍ່ສາມາດສັ່ງຊື້ໄດ້. ກະລຸນາລອງໃໝ່.';
+
+  @override
+  String get customerPlaceOrder => 'ສັ່ງຊື້';
+
+  @override
+  String get customerTransferOff => 'ການໂອນເງິນຍັງບໍ່ໄດ້ເປີດໃຊ້';
+
+  @override
+  String customerOrderPlaced(String name) {
+    return 'ສັ່ງຊື້ສຳເລັດແລ້ວ, $name!';
+  }
+
+  @override
+  String get customerAddToppings => 'ເພີ່ມທັອບປິງ';
+
+  @override
+  String get customerAddDrink => 'ເພີ່ມເຄື່ອງດື່ມ';
+
+  @override
+  String get customerChooseDrink => 'ເລືອກເຄື່ອງດື່ມ';
+
+  @override
+  String get customerBack => 'ກັບຄືນ';
+
+  @override
+  String get customerNext => 'ຕໍ່ໄປ';
+
+  @override
+  String get customerAddButton => 'ເພີ່ມ';
+
+  @override
+  String customerDishPrice(String name, String price) {
+    return '$name: $price';
+  }
+
+  @override
+  String get customerPayNotFound => 'ບໍ່ພົບຄຳສັ່ງຊື້.';
+
+  @override
+  String get customerPayChecking => 'ກຳລັງກວດສອບການຊຳລະ…';
+
+  @override
+  String get customerPayCancelled => 'ຄຳສັ່ງຊື້ຂອງທ່ານຖືກຍົກເລີກແລ້ວ.';
+
+  @override
+  String get customerPayReceived => 'ໄດ້ຮັບການຊຳລະແລ້ວ. ຂອບໃຈ!';
+
+  @override
+  String get customerPayCashOrder => 'ຄຳສັ່ງຊື້ຂອງທ່ານຈະຊຳລະເປັນເງິນສົດ.';
+
+  @override
+  String get customerPayRecheck => 'ກວດສອບອີກຄັ້ງ';
+
+  @override
+  String get customerBackToMenu => 'ກັບໄປເມນູ';
+
+  @override
+  String get customerSwitchToCash => 'ປ່ຽນເປັນເງິນສົດ';
+
+  @override
+  String get customerPayInstruction =>
+      'ກະລຸນາໂອນເງິນພາຍໃນ 5 ນາທີ ເພື່ອຮັກສາຄຳສັ່ງຊື້ຂອງທ່ານ.';
+
+  @override
+  String customerCountdown(String time) {
+    return 'ເຫຼືອ $time';
+  }
+
+  @override
+  String get customerBank => 'ທະນາຄານ';
+
+  @override
+  String get customerAccountNumber => 'ເລກບັນຊີ';
+
+  @override
+  String get customerAccountName => 'ເຈົ້າຂອງບັນຊີ';
+
+  @override
+  String get customerAmount => 'ຈຳນວນເງິນ';
+
+  @override
+  String get customerTransferContent => 'ເນື້ອໃນການໂອນ';
+
+  @override
+  String get customerQrLoadFailed => 'ບໍ່ສາມາດໂຫຼດລະຫັດ QR ໄດ້.';
+
+  @override
+  String get customerCashHint => 'ປ່ຽນເປັນເງິນສົດ ຖ້າທ່ານຍັງບໍ່ຢາກຊຳລະດຽວນີ້';
+
+  @override
+  String get customerPayChanged =>
+      'ຄຳສັ່ງຊື້ຂອງທ່ານຫາກໍປ່ຽນແປງ, ກຳລັງກວດສອບອີກຄັ້ງ';
+
+  @override
+  String get customerPayActionFailed => 'ບໍ່ສຳເລັດ. ກະລຸນາລອງໃໝ່.';
+
+  @override
+  String get customerPayTooLate =>
+      'ເກີນ 15 ນາທີແລ້ວ. ກະລຸນາສັ່ງໃໝ່ ຫຼື ແຈ້ງຮ້ານ.';
+
+  @override
+  String get customerPayExpired =>
+      'ໝົດເວລາຊຳລະເງິນສຳລັບຄຳສັ່ງຊື້ຂອງທ່ານແລ້ວ. ທ່ານຕ້ອງການປ່ຽນເປັນຊຳລະເງິນສົດບໍ?';
+
+  @override
+  String get customerPayTransferUnavailable => 'ການໂອນເງິນຊົ່ວຄາວໃຊ້ບໍ່ໄດ້';
+
+  @override
+  String get customerNewQr => 'ສ້າງລະຫັດ QR ໃໝ່';
+
+  @override
+  String get customerQrSemantics => 'ລະຫັດ QR ສຳລັບໂອນເງິນ';
 }

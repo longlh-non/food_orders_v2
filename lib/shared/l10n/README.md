@@ -12,11 +12,26 @@ do not edit them by hand. Every language must have the same keys
 
 - `vi`: the Vietnamese the owner already accepted, copied verbatim. Strings
   that appeared after that acceptance (menu editor, export dialog, payment
-  buttons) were drafted by the same translation pass and are as accepted as
-  the rest of the live app.
+  buttons) were drafted by the same translation pass; owner acceptance of
+  them is pending (unverified).
 - `en`: restored from the old English where git history had it (orders page,
   export dialog, staff login, status labels, titles); everything else is
   redrafted, not restored (menu editor, payment texts, new strings).
 - `zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`: machine-quality drafts.
   **Unverified wording**: no fluent reader has checked them. Lao and the plural
   forms of Russian need particular care.
+
+## Customer app strings (customer-l10n-wiring)
+
+58 `customer*` keys (menu page, cart, add dialog, payment page) were added to
+all 10 files. The customer UI was already hardcoded Vietnamese when they were
+written, and the old English was no longer in git, so:
+
+- `vi`: the existing hardcoded text, verbatim.
+- `en`: redrafted from the Vietnamese, not restored.
+- `zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`: machine-quality drafts,
+  **unverified** (same caveat as above). Plural messages (`customerCartPriceChanged`,
+  `customerCartRemoved`) have `one`/`other` for en, es, fr, de; `one`/`few`/`many`/`other`
+  for ru; only `other` for vi, lo, ja, zh, ko.
+- Order status and payment method names reuse the `status*` / `payment*` keys.
+

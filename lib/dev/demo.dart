@@ -4,6 +4,7 @@ import '../customer/pages/menu_page.dart';
 import '../customer/state/menu_state.dart';
 import '../restaurant/pages/orders_page.dart';
 import '../shared/api/order_repository.dart';
+import '../shared/l10n.dart';
 import '../shared/theme.dart';
 
 /// Dev-only split-view entry point: customer screen on the left, restaurant
@@ -25,6 +26,7 @@ import '../shared/theme.dart';
 ///
 /// Run with: `flutter run -t lib/dev/demo.dart -d chrome --web-port=8082`
 void main() {
+  LocaleController.instance.init();
   OrderRepository.instance.init();
   // Fire-and-forget like init(): the menu page shows a spinner until it
   // arrives, or an error with Retry if the backend is down.
@@ -40,10 +42,19 @@ class DemoApp extends StatelessWidget {
   /// Builds the app shell. It watches nothing, so it is built once.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Food Orders — Demo',
-      theme: customerTheme(),
-      home: const _SplitView(),
+    // The customer pages read AppLocalizations, so this MaterialApp needs the
+    // delegates and the language, like the real apps. It rebuilds when the
+    // language picker changes the language.
+    return ListenableBuilder(
+      listenable: LocaleController.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'Food Orders — Demo',
+        theme: customerTheme(),
+        locale: LocaleController.instance.locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const _SplitView(),
+      ),
     );
   }
 }

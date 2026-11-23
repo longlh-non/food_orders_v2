@@ -36,7 +36,8 @@ class CustomerApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: LocaleController.instance,
       builder: (context, _) => MaterialApp(
-        title: 'Đặt Món',
+        onGenerateTitle: (context) =>
+            AppLocalizations.of(context)!.appTitleCustomer,
         theme: customerTheme(),
         locale: LocaleController.instance.locale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,

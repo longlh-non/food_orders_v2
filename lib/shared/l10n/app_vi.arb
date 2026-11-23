@@ -315,5 +315,298 @@
   "menuSaveFailed": "Không lưu được. Thử lại.",
   "@menuSaveFailed": {
     "description": "Error: the menu change could not be saved."
+  },
+  "customerMenuTitle": "Thực đơn",
+  "@customerMenuTitle": {
+    "description": "Customer menu page title."
+  },
+  "customerCartPriceChanged": "{count, plural, other{Giá của {count} món trong giỏ hàng đã thay đổi.}}",
+  "@customerCartPriceChanged": {
+    "description": "Snackbar note after a menu reload: prices of {count} cart lines changed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerCartRemoved": "{count, plural, other{{count} món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng.}}",
+  "@customerCartRemoved": {
+    "description": "Snackbar note after a menu reload: {count} cart lines left the menu and were removed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customerOrderStatusSnack": "Đơn #{shortId}: {status}",
+  "@customerOrderStatusSnack": {
+    "description": "Snackbar when a tracked order changes status; {shortId} is the last 4 characters of the order id, {status} the new status label.",
+    "placeholders": {
+      "shortId": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "customerOrderExpiredSnack": "Đơn #{shortId}: hết hạn thanh toán",
+  "@customerOrderExpiredSnack": {
+    "description": "Snackbar when a tracked transfer order expired unpaid.",
+    "placeholders": {
+      "shortId": {
+        "type": "String"
+      }
+    }
+  },
+  "customerMenuLoadFailed": "Không tải được thực đơn",
+  "@customerMenuLoadFailed": {
+    "description": "Menu page: the menu could not be loaded."
+  },
+  "customerCartTooltip": "Giỏ hàng",
+  "@customerCartTooltip": {
+    "description": "Tooltip of the round cart button on the menu page."
+  },
+  "customerCategoryFood": "Đồ ăn",
+  "@customerCategoryFood": {
+    "description": "Menu tab: main dishes."
+  },
+  "customerCategoryDrink": "Đồ uống",
+  "@customerCategoryDrink": {
+    "description": "Menu tab: drinks."
+  },
+  "customerCategorySnack": "Ăn nhẹ",
+  "@customerCategorySnack": {
+    "description": "Menu tab: light bites (Ăn nhẹ)."
+  },
+  "customerCategoryNibble": "Ăn vặt",
+  "@customerCategoryNibble": {
+    "description": "Menu tab: snacks (Ăn vặt)."
+  },
+  "customerCategoryEmpty": "Chưa có món nào trong mục này",
+  "@customerCategoryEmpty": {
+    "description": "Menu page: the chosen tab has no items."
+  },
+  "customerYourOrders": "Đơn của bạn",
+  "@customerYourOrders": {
+    "description": "Title of the banner listing the customer's active orders."
+  },
+  "customerOrderExpired": "Hết hạn thanh toán",
+  "@customerOrderExpired": {
+    "description": "Order line in the banner: the unpaid transfer order expired."
+  },
+  "customerAddItem": "Thêm {name}",
+  "@customerAddItem": {
+    "description": "Tooltip of the + button and title of the add dialog; {name} is the dish name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customerAdded": "Đã thêm {names}",
+  "@customerAdded": {
+    "description": "Snackbar after adding to the cart; {names} is one name or \"dish + drink\".",
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "customerSoldOut": "Hết hàng",
+  "@customerSoldOut": {
+    "description": "Pill over a sold-out menu tile, and drink-step subtitle."
+  },
+  "customerCartTitle": "Giỏ hàng của bạn",
+  "@customerCartTitle": {
+    "description": "Cart page title."
+  },
+  "customerCartEmpty": "Giỏ hàng trống.",
+  "@customerCartEmpty": {
+    "description": "Cart page: nothing in the cart."
+  },
+  "customerPricePerItem": "{price} / món",
+  "@customerPricePerItem": {
+    "description": "Cart line: price of one unit; {price} is already formatted.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "customerNameLabel": "Tên của bạn",
+  "@customerNameLabel": {
+    "description": "Cart page: label of the name field."
+  },
+  "customerNameRequired": "Vui lòng nhập tên của bạn",
+  "@customerNameRequired": {
+    "description": "Cart page: snackbar when the name is empty."
+  },
+  "customerCartTotal": "Tổng cộng: {total}",
+  "@customerCartTotal": {
+    "description": "Cart page: the total; {total} is already formatted.",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "customerOrderFailed": "Không thể đặt hàng. Vui lòng thử lại.",
+  "@customerOrderFailed": {
+    "description": "Cart page: the order could not be sent."
+  },
+  "customerPlaceOrder": "Đặt hàng",
+  "@customerPlaceOrder": {
+    "description": "Cart page: the order button."
+  },
+  "customerTransferOff": "Chuyển khoản chưa được bật",
+  "@customerTransferOff": {
+    "description": "Cart page: bank transfer is not set up on the server."
+  },
+  "customerOrderPlaced": "Đặt hàng thành công, {name}!",
+  "@customerOrderPlaced": {
+    "description": "Snackbar after a cash order was accepted; {name} is the customer name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "customerAddToppings": "Thêm topping",
+  "@customerAddToppings": {
+    "description": "Add dialog: the toppings checkbox and the toppings step title."
+  },
+  "customerAddDrink": "Thêm đồ uống",
+  "@customerAddDrink": {
+    "description": "Add dialog: the drink checkbox."
+  },
+  "customerChooseDrink": "Chọn đồ uống",
+  "@customerChooseDrink": {
+    "description": "Add dialog: title of the drink step."
+  },
+  "customerBack": "Quay lại",
+  "@customerBack": {
+    "description": "Add dialog: go back one step."
+  },
+  "customerNext": "Tiếp",
+  "@customerNext": {
+    "description": "Add dialog: go to the next step."
+  },
+  "customerAddButton": "Thêm",
+  "@customerAddButton": {
+    "description": "Add dialog: confirm adding to the cart."
+  },
+  "customerDishPrice": "{name}: {price}",
+  "@customerDishPrice": {
+    "description": "Add dialog: the dish and its price with the ticked toppings.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "customerPayNotFound": "Không tìm thấy đơn hàng.",
+  "@customerPayNotFound": {
+    "description": "Payment page: the order is not in the list."
+  },
+  "customerPayChecking": "Đang kiểm tra thanh toán…",
+  "@customerPayChecking": {
+    "description": "Payment page: waiting for the server to settle an overdue order."
+  },
+  "customerPayCancelled": "Đơn của bạn đã bị hủy.",
+  "@customerPayCancelled": {
+    "description": "Payment page: the order was cancelled by the shop."
+  },
+  "customerPayReceived": "Đã nhận thanh toán. Cảm ơn bạn!",
+  "@customerPayReceived": {
+    "description": "Payment page: payment received."
+  },
+  "customerPayCashOrder": "Đơn của bạn sẽ được thanh toán bằng tiền mặt.",
+  "@customerPayCashOrder": {
+    "description": "Payment page: the order is paid in cash."
+  },
+  "customerPayRecheck": "Kiểm tra lại",
+  "@customerPayRecheck": {
+    "description": "Payment page: button to read the order again."
+  },
+  "customerBackToMenu": "Về menu",
+  "@customerBackToMenu": {
+    "description": "Payment page: button back to the menu."
+  },
+  "customerSwitchToCash": "Chuyển sang tiền mặt",
+  "@customerSwitchToCash": {
+    "description": "Payment page: switch the order to cash."
+  },
+  "customerPayInstruction": "Hãy chuyển khoản trong vòng 5 phút để giữ đơn.",
+  "@customerPayInstruction": {
+    "description": "Payment page: instruction above the QR."
+  },
+  "customerCountdown": "Còn lại {time}",
+  "@customerCountdown": {
+    "description": "Payment page: countdown; {time} is mm:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "customerBank": "Ngân hàng",
+  "@customerBank": {
+    "description": "Payment page: label of the bank name."
+  },
+  "customerAccountNumber": "Số tài khoản",
+  "@customerAccountNumber": {
+    "description": "Payment page: label of the account number."
+  },
+  "customerAccountName": "Chủ tài khoản",
+  "@customerAccountName": {
+    "description": "Payment page: label of the account holder."
+  },
+  "customerAmount": "Số tiền",
+  "@customerAmount": {
+    "description": "Payment page: label of the amount."
+  },
+  "customerTransferContent": "Nội dung chuyển khoản",
+  "@customerTransferContent": {
+    "description": "Payment page: label of the transfer reference."
+  },
+  "customerQrLoadFailed": "Không tải được mã QR.",
+  "@customerQrLoadFailed": {
+    "description": "Payment page: the QR could not be loaded."
+  },
+  "customerCashHint": "Đổi sang thanh toán tiền mặt nếu bạn chưa muốn thanh toán luôn",
+  "@customerCashHint": {
+    "description": "Payment page: hint above the switch-to-cash button."
+  },
+  "customerPayChanged": "Đơn vừa thay đổi, đang kiểm tra lại",
+  "@customerPayChanged": {
+    "description": "Payment page: the order changed while an action ran."
+  },
+  "customerPayActionFailed": "Không thực hiện được. Vui lòng thử lại.",
+  "@customerPayActionFailed": {
+    "description": "Payment page: a customer action failed."
+  },
+  "customerPayTooLate": "Đã quá 15 phút. Hãy đặt lại đơn hoặc báo cho quán.",
+  "@customerPayTooLate": {
+    "description": "Payment page: more than 15 minutes since the expiry."
+  },
+  "customerPayExpired": "Đơn của bạn đã hết hạn thanh toán. Bạn có muốn chuyển sang thanh toán tiền mặt không?",
+  "@customerPayExpired": {
+    "description": "Payment page: the payment time ran out; ask what to do."
+  },
+  "customerPayTransferUnavailable": "Chuyển khoản tạm thời không dùng được",
+  "@customerPayTransferUnavailable": {
+    "description": "Payment page: renewing the QR failed because transfer is off."
+  },
+  "customerNewQr": "Tạo mã QR mới",
+  "@customerNewQr": {
+    "description": "Payment page: ask for a fresh QR code."
+  },
+  "customerQrSemantics": "Mã QR chuyển khoản",
+  "@customerQrSemantics": {
+    "description": "Payment page: screen reader label of the QR."
   }
 }

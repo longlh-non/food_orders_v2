@@ -503,6 +503,354 @@ abstract class AppLocalizations {
   /// In vi, this message translates to:
   /// **'Không lưu được. Thử lại.'**
   String get menuSaveFailed;
+
+  /// Customer menu page title.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thực đơn'**
+  String get customerMenuTitle;
+
+  /// Snackbar note after a menu reload: prices of {count} cart lines changed.
+  ///
+  /// In vi, this message translates to:
+  /// **'{count, plural, other{Giá của {count} món trong giỏ hàng đã thay đổi.}}'**
+  String customerCartPriceChanged(int count);
+
+  /// Snackbar note after a menu reload: {count} cart lines left the menu and were removed.
+  ///
+  /// In vi, this message translates to:
+  /// **'{count, plural, other{{count} món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng.}}'**
+  String customerCartRemoved(int count);
+
+  /// Snackbar when a tracked order changes status; {shortId} is the last 4 characters of the order id, {status} the new status label.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn #{shortId}: {status}'**
+  String customerOrderStatusSnack(String shortId, String status);
+
+  /// Snackbar when a tracked transfer order expired unpaid.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn #{shortId}: hết hạn thanh toán'**
+  String customerOrderExpiredSnack(String shortId);
+
+  /// Menu page: the menu could not be loaded.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không tải được thực đơn'**
+  String get customerMenuLoadFailed;
+
+  /// Tooltip of the round cart button on the menu page.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giỏ hàng'**
+  String get customerCartTooltip;
+
+  /// Menu tab: main dishes.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đồ ăn'**
+  String get customerCategoryFood;
+
+  /// Menu tab: drinks.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đồ uống'**
+  String get customerCategoryDrink;
+
+  /// Menu tab: light bites (Ăn nhẹ).
+  ///
+  /// In vi, this message translates to:
+  /// **'Ăn nhẹ'**
+  String get customerCategorySnack;
+
+  /// Menu tab: snacks (Ăn vặt).
+  ///
+  /// In vi, this message translates to:
+  /// **'Ăn vặt'**
+  String get customerCategoryNibble;
+
+  /// Menu page: the chosen tab has no items.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chưa có món nào trong mục này'**
+  String get customerCategoryEmpty;
+
+  /// Title of the banner listing the customer's active orders.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn của bạn'**
+  String get customerYourOrders;
+
+  /// Order line in the banner: the unpaid transfer order expired.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hết hạn thanh toán'**
+  String get customerOrderExpired;
+
+  /// Tooltip of the + button and title of the add dialog; {name} is the dish name.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm {name}'**
+  String customerAddItem(String name);
+
+  /// Snackbar after adding to the cart; {names} is one name or "dish + drink".
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã thêm {names}'**
+  String customerAdded(String names);
+
+  /// Pill over a sold-out menu tile, and drink-step subtitle.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hết hàng'**
+  String get customerSoldOut;
+
+  /// Cart page title.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giỏ hàng của bạn'**
+  String get customerCartTitle;
+
+  /// Cart page: nothing in the cart.
+  ///
+  /// In vi, this message translates to:
+  /// **'Giỏ hàng trống.'**
+  String get customerCartEmpty;
+
+  /// Cart line: price of one unit; {price} is already formatted.
+  ///
+  /// In vi, this message translates to:
+  /// **'{price} / món'**
+  String customerPricePerItem(String price);
+
+  /// Cart page: label of the name field.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tên của bạn'**
+  String get customerNameLabel;
+
+  /// Cart page: snackbar when the name is empty.
+  ///
+  /// In vi, this message translates to:
+  /// **'Vui lòng nhập tên của bạn'**
+  String get customerNameRequired;
+
+  /// Cart page: the total; {total} is already formatted.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tổng cộng: {total}'**
+  String customerCartTotal(String total);
+
+  /// Cart page: the order could not be sent.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không thể đặt hàng. Vui lòng thử lại.'**
+  String get customerOrderFailed;
+
+  /// Cart page: the order button.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đặt hàng'**
+  String get customerPlaceOrder;
+
+  /// Cart page: bank transfer is not set up on the server.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chuyển khoản chưa được bật'**
+  String get customerTransferOff;
+
+  /// Snackbar after a cash order was accepted; {name} is the customer name.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đặt hàng thành công, {name}!'**
+  String customerOrderPlaced(String name);
+
+  /// Add dialog: the toppings checkbox and the toppings step title.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm topping'**
+  String get customerAddToppings;
+
+  /// Add dialog: the drink checkbox.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm đồ uống'**
+  String get customerAddDrink;
+
+  /// Add dialog: title of the drink step.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chọn đồ uống'**
+  String get customerChooseDrink;
+
+  /// Add dialog: go back one step.
+  ///
+  /// In vi, this message translates to:
+  /// **'Quay lại'**
+  String get customerBack;
+
+  /// Add dialog: go to the next step.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tiếp'**
+  String get customerNext;
+
+  /// Add dialog: confirm adding to the cart.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm'**
+  String get customerAddButton;
+
+  /// Add dialog: the dish and its price with the ticked toppings.
+  ///
+  /// In vi, this message translates to:
+  /// **'{name}: {price}'**
+  String customerDishPrice(String name, String price);
+
+  /// Payment page: the order is not in the list.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không tìm thấy đơn hàng.'**
+  String get customerPayNotFound;
+
+  /// Payment page: waiting for the server to settle an overdue order.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đang kiểm tra thanh toán…'**
+  String get customerPayChecking;
+
+  /// Payment page: the order was cancelled by the shop.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn của bạn đã bị hủy.'**
+  String get customerPayCancelled;
+
+  /// Payment page: payment received.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã nhận thanh toán. Cảm ơn bạn!'**
+  String get customerPayReceived;
+
+  /// Payment page: the order is paid in cash.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn của bạn sẽ được thanh toán bằng tiền mặt.'**
+  String get customerPayCashOrder;
+
+  /// Payment page: button to read the order again.
+  ///
+  /// In vi, this message translates to:
+  /// **'Kiểm tra lại'**
+  String get customerPayRecheck;
+
+  /// Payment page: button back to the menu.
+  ///
+  /// In vi, this message translates to:
+  /// **'Về menu'**
+  String get customerBackToMenu;
+
+  /// Payment page: switch the order to cash.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chuyển sang tiền mặt'**
+  String get customerSwitchToCash;
+
+  /// Payment page: instruction above the QR.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hãy chuyển khoản trong vòng 5 phút để giữ đơn.'**
+  String get customerPayInstruction;
+
+  /// Payment page: countdown; {time} is mm:ss.
+  ///
+  /// In vi, this message translates to:
+  /// **'Còn lại {time}'**
+  String customerCountdown(String time);
+
+  /// Payment page: label of the bank name.
+  ///
+  /// In vi, this message translates to:
+  /// **'Ngân hàng'**
+  String get customerBank;
+
+  /// Payment page: label of the account number.
+  ///
+  /// In vi, this message translates to:
+  /// **'Số tài khoản'**
+  String get customerAccountNumber;
+
+  /// Payment page: label of the account holder.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chủ tài khoản'**
+  String get customerAccountName;
+
+  /// Payment page: label of the amount.
+  ///
+  /// In vi, this message translates to:
+  /// **'Số tiền'**
+  String get customerAmount;
+
+  /// Payment page: label of the transfer reference.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nội dung chuyển khoản'**
+  String get customerTransferContent;
+
+  /// Payment page: the QR could not be loaded.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không tải được mã QR.'**
+  String get customerQrLoadFailed;
+
+  /// Payment page: hint above the switch-to-cash button.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đổi sang thanh toán tiền mặt nếu bạn chưa muốn thanh toán luôn'**
+  String get customerCashHint;
+
+  /// Payment page: the order changed while an action ran.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn vừa thay đổi, đang kiểm tra lại'**
+  String get customerPayChanged;
+
+  /// Payment page: a customer action failed.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không thực hiện được. Vui lòng thử lại.'**
+  String get customerPayActionFailed;
+
+  /// Payment page: more than 15 minutes since the expiry.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã quá 15 phút. Hãy đặt lại đơn hoặc báo cho quán.'**
+  String get customerPayTooLate;
+
+  /// Payment page: the payment time ran out; ask what to do.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn của bạn đã hết hạn thanh toán. Bạn có muốn chuyển sang thanh toán tiền mặt không?'**
+  String get customerPayExpired;
+
+  /// Payment page: renewing the QR failed because transfer is off.
+  ///
+  /// In vi, this message translates to:
+  /// **'Chuyển khoản tạm thời không dùng được'**
+  String get customerPayTransferUnavailable;
+
+  /// Payment page: ask for a fresh QR code.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tạo mã QR mới'**
+  String get customerNewQr;
+
+  /// Payment page: screen reader label of the QR.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mã QR chuyển khoản'**
+  String get customerQrSemantics;
 }
 
 class _AppLocalizationsDelegate

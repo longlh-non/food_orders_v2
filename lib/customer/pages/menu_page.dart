@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../shared/api/order_api_client.dart';
 import '../../shared/api/order_repository.dart';
+import '../../shared/l10n.dart';
 import '../../shared/models/menu_item.dart';
 import '../../shared/models/order.dart';
 import '../../shared/money.dart';
+import '../../shared/widgets/language_picker.dart';
+import '../../shared/localized_labels.dart';
 import '../state/cart.dart';
 import '../state/menu_state.dart';
 import '../state/my_orders.dart';
@@ -81,18 +84,17 @@ class _MenuPageState extends State<MenuPage> {
       _menu.items,
       _menu.toppings,
     );
+    // Each note is a whole sentence with its own full stop (plural-aware),
+    // so the language decides the punctuation.
+    final l10n = AppLocalizations.of(context)!;
     final notes = [
-      if (repriced == 1) 'Giá của 1 món trong giỏ hàng đã thay đổi',
-      if (repriced > 1) 'Giá của $repriced món trong giỏ hàng đã thay đổi',
-      if (removed == 1)
-        '1 món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng',
-      if (removed > 1)
-        '$removed món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng',
+      if (repriced > 0) l10n.customerCartPriceChanged(repriced),
+      if (removed > 0) l10n.customerCartRemoved(removed),
     ];
     if (notes.isNotEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text('${notes.join('. ')}.')));
+        ..showSnackBar(SnackBar(content: Text(notes.join(' '))));
     }
   }
 
@@ -114,14 +116,19 @@ class _MenuPageState extends State<MenuPage> {
       final prev = _lastStatuses[order.id];
       _lastStatuses[order.id] = order.status;
       if (!initial && prev != null && prev != order.status) {
+        // Looked up here, not earlier: initState (initial pass) can't read it.
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
             SnackBar(
               content: Text(
                 order.expiredUnpaid
-                    ? 'Đơn #${_shortId(order.id)}: hết hạn thanh toán'
-                    : 'Đơn #${_shortId(order.id)}: ${order.status.label}',
+                    ? l10n.customerOrderExpiredSnack(_shortId(order.id))
+                    : l10n.customerOrderStatusSnack(
+                        _shortId(order.id),
+                        order.status.localized(l10n),
+                      ),
               ),
             ),
           );
@@ -157,7 +164,10 @@ class _MenuPageState extends State<MenuPage> {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Thực đơn')),
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context)!.customerMenuTitle),
+          actions: const [LanguagePicker()],
+        ),
         // One cart button, round and red, docked in the middle of a slim
         // bar at the bottom (decision NAV1). The cart opens as its own page
         // on top (NAV2), so the chosen category is still there on return.
@@ -179,7 +189,7 @@ class _MenuPageState extends State<MenuPage> {
                     _menuStatus() ??
                     TabBarView(
                       children: [
-                        for (final (category, _, _) in _tabs)
+                        for (final (category, _) in _tabs)
                           _TabContent(
                             // Keeps each tab's scroll position when switching
                             // tabs and coming back (owner, 2026-11-12).
@@ -207,10 +217,10 @@ class _MenuPageState extends State<MenuPage> {
     if (_menu.error != null) {
       return _MenuMessage(
         // Generic on purpose: never show the raw error to customers.
-        text: 'Không tải được thực đơn',
+        text: AppLocalizations.of(context)!.customerMenuLoadFailed,
         action: FilledButton(
           onPressed: _menu.isLoading ? null : _menu.load,
-          child: const Text('Thử lại'),
+          child: Text(AppLocalizations.of(context)!.commonRetry),
         ),
       );
     }
@@ -235,7 +245,7 @@ class _CartButton extends StatelessWidget {
     return ListenableBuilder(
       listenable: cart,
       builder: (context, _) => FloatingActionButton(
-        tooltip: 'Giỏ hàng',
+        tooltip: AppLocalizations.of(context)!.customerCartTooltip,
         shape: const CircleBorder(),
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -252,13 +262,23 @@ class _CartButton extends StatelessWidget {
   }
 }
 
-/// The tabs, in the owner's order, with the owner's labels and icons.
-const _tabs = <(MenuCategory, String, IconData)>[
-  (MenuCategory.food, 'Đồ ăn', Icons.rice_bowl),
-  (MenuCategory.drink, 'Đồ uống', Icons.local_drink),
-  (MenuCategory.snack, 'Ăn nhẹ', Icons.bakery_dining),
-  (MenuCategory.nibble, 'Ăn vặt', Icons.cookie),
+/// The tabs, in the owner's order, with their icons. The label is looked up
+/// per language by [_tabLabel].
+const _tabs = <(MenuCategory, IconData)>[
+  (MenuCategory.food, Icons.rice_bowl),
+  (MenuCategory.drink, Icons.local_drink),
+  (MenuCategory.snack, Icons.bakery_dining),
+  (MenuCategory.nibble, Icons.cookie),
 ];
+
+/// The tab label for [category] in the current language.
+String _tabLabel(AppLocalizations l10n, MenuCategory category) =>
+    switch (category) {
+      MenuCategory.food => l10n.customerCategoryFood,
+      MenuCategory.drink => l10n.customerCategoryDrink,
+      MenuCategory.snack => l10n.customerCategorySnack,
+      MenuCategory.nibble => l10n.customerCategoryNibble,
+    };
 
 /// The row of category tiles under the app bar, on the cream page.
 ///
@@ -291,10 +311,14 @@ class _CategoryBar extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         overlayColor: const WidgetStatePropertyAll(Colors.transparent),
         tabs: [
-          for (final (index, (_, label, icon)) in _tabs.indexed)
+          for (final (index, (category, icon)) in _tabs.indexed)
             Tab(
               height: height,
-              child: _CategoryTile(index: index, label: label, icon: icon),
+              child: _CategoryTile(
+                index: index,
+                label: _tabLabel(AppLocalizations.of(context)!, category),
+                icon: icon,
+              ),
             ),
         ],
       ),
@@ -397,9 +421,11 @@ class _TabContent extends StatelessWidget {
         if (myActive.isNotEmpty)
           SliverToBoxAdapter(child: _MyOrdersBanner(orders: myActive)),
         if (items.isEmpty)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
-            child: _MenuMessage(text: 'Chưa có món nào trong mục này'),
+            child: _MenuMessage(
+              text: AppLocalizations.of(context)!.customerCategoryEmpty,
+            ),
           )
         else
           SliverPadding(
@@ -479,11 +505,14 @@ class _MyOrdersBanner extends StatelessWidget {
               children: [
                 Icon(Icons.receipt_long, color: scheme.onPrimaryContainer),
                 const SizedBox(width: 8),
-                Text(
-                  'Đơn của bạn',
-                  style: TextStyle(
-                    color: scheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
+                // Expanded: a long translation wraps instead of overflowing.
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)!.customerYourOrders,
+                    style: TextStyle(
+                      color: scheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -501,13 +530,21 @@ class _MyOrdersBanner extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        o.expiredUnpaid ? 'Hết hạn thanh toán' : o.status.label,
+                        o.expiredUnpaid
+                            ? AppLocalizations.of(context)!.customerOrderExpired
+                            : o.status.localized(AppLocalizations.of(context)!),
                         style: TextStyle(color: scheme.onPrimaryContainer),
                       ),
                     ),
-                    Text(
-                      formatVnd(o.total),
-                      style: TextStyle(color: scheme.onPrimaryContainer),
+                    // Shrinks instead of overflowing at large text sizes.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          formatVnd(o.total),
+                          style: TextStyle(color: scheme.onPrimaryContainer),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -624,7 +661,8 @@ class _MenuTile extends StatelessWidget {
                         ),
                       ),
                       AddItemButton(
-                        tooltip: 'Thêm ${item.name}',
+                        tooltip: AppLocalizations.of(context)!
+                            .customerAddItem(item.name),
                         onPressed: item.available ? () => _add(context) : null,
                       ),
                     ],
@@ -666,11 +704,12 @@ class _MenuTile extends StatelessWidget {
     if (choice.drink case final drink?) Cart.instance.add(drink);
     if (!context.mounted) return;
     final added = [item.name, ?choice.drink?.name].join(' + ');
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('Đã thêm $added'),
+          content: Text(l10n.customerAdded(added)),
           duration: const Duration(milliseconds: 800),
         ),
       );
@@ -693,7 +732,7 @@ class _SoldOutLabel extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Text(
-          'Hết hàng',
+          AppLocalizations.of(context)!.customerSoldOut,
           maxLines: 1,
           style: Theme.of(context).textTheme.labelLarge
               ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
