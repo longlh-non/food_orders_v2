@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # Dependabot does not bump this: the owner updates it by hand,
           # together with their local Flutter (see docs/ci-cd-decisions.md D3).
@@ -56,7 +56,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           # Keep in step with the `check` job above (docs/ci-cd-decisions.md D3).
           flutter-version: "3.47.7"
