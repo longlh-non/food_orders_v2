@@ -1,0 +1,7 @@
+# Settings for `flutter gen-l10n` (run automatically by `flutter pub get`,
+# `flutter run` and `flutter test` because pubspec.yaml sets `generate: true`).
+# The ARB files hold the texts; the generated Dart classes are written next to
+# them. Vietnamese is the template: its file defines the keys and placeholders.
+arb-dir: lib/shared/l10n
+template-arb-file: app_vi.arb
+output-localization-file: app_localizations.dart

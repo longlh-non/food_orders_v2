@@ -1,0 +1,183 @@
+# Production reverse proxy: same layout as dev/Caddyfile, just with real
+# hostnames and HTTPS instead of two .local addresses. Caddy serves the
+# static Flutter web builds and proxies /api/* to the backend, same-origin,
+# so OrderApiClient (base URL "/api" in lib/shared/api/order_api_client.dart)
+# needs no change.
+#
+# Placeholders the owner replaces before this file goes on the server:
+#   - customer.example.com / restaurant.example.com -> the real hostnames
+#     (HOST2, still open as of docs/ci-cd-decisions.md).
+#   - /var/www/food-orders/customer and /var/www/food-orders/restaurant ->
+#     wherever deploy/build.sh's two outputs were copied (see deploy/build.sh
+#     and the runbook for the rsync step).
+#
+# Automatic HTTPS stays ON: do not add `auto_https off` (that line in
+# dev/Caddyfile only exists because *.local has no public DNS for
+# Let's Encrypt to verify). Each hostname below gets its own certificate,
+# renewed automatically, on first request.
+
+# ACCESS GATE (HOST3 = A, docs/ci-cd-decisions.md): one shared username and
+# password, Caddy HTTP basic auth, on BOTH sites and on EVERYTHING they serve,
+# including /api/* and the SSE stream. Not per-user accounts; the password is
+# shared and is only safe because it travels over HTTPS.
+#
+#   - The password HASH is never committed. Both values come from environment
+#     variables of the caddy service, read when Caddy starts:
+#         FOOD_ORDERS_AUTH_USER   the username
+#         FOOD_ORDERS_AUTH_HASH   a bcrypt hash made by `caddy hash-password`
+#     Do not leave them unset. Checked with Caddy 2.6.2: with only the hash
+#     unset, Caddy refuses to load this file ("username and password cannot
+#     be empty or missing"); with both unset the file loads but the gate has
+#     no account, so every request gets 401 (fails closed). After setup,
+#     confirm with `curl -sI https://<host>/` (expect 401) and with the
+#     credentials (expect 200).
+#   - Owner-run setup on the server (agents never run these):
+#         caddy hash-password          # type the password twice, copy the $2a$... line
+#         sudo install -m 600 -o root -g root /dev/null /etc/caddy/food-orders-auth.env
+#         sudoedit /etc/caddy/food-orders-auth.env
+#             FOOD_ORDERS_AUTH_USER=demo
+#             FOOD_ORDERS_AUTH_HASH='$2a$14$...'      <- single quotes keep the $
+#         sudo systemctl edit caddy      # opens a drop-in; add:
+#             [Service]
+#             EnvironmentFile=/etc/caddy/food-orders-auth.env
+#         sudo systemctl restart caddy   # restart: the safe way to pick up new env values
+#     The env file lives only on the server, never in the repo. Share the
+#     password with the demo viewers by a channel other than this repo.
+#   - Order: in the Caddyfile the directive order is fixed by Caddy, not by
+#     where the line is written. basic auth runs before `handle`/`handle_path`
+#     and before `file_server`, so /api/*, the SSE stream and the static files
+#     are all behind it. (Checked with `caddy adapt --pretty`.) The 401 and the
+#     WWW-Authenticate challenge come from Caddy; the backend never sees an
+#     unauthenticated request.
+#   - Separate from the staff login: the backend never reads `Authorization`.
+#     Staff routes use X-Staff-Id / X-Staff-Password, so one request can carry
+#     both.
+#   - Browser behaviour is UNVERIFIED until the owner tests it: after the
+#     browser's one login prompt for the page, same-origin fetches and the
+#     EventSource to /api/* should resend the credentials automatically, but
+#     a prompt that doesn't reappear on the SSE reconnect, and whether the
+#     Flutter service worker's requests are authenticated, need a real browser.
+#   - CROSS-SITE (security review P1): a viewer's browser caches the gate
+#     credentials, and the backend does not check Content-Type, so a hostile
+#     page could send a "simple" cross-site POST (text/plain, no-cors) to
+#     /api/orders with those credentials attached. Each site therefore refuses
+#     any /api/* request whose Sec-Fetch-Site header is `cross-site` (403).
+#     Modern browsers always send that header; curl and old clients send none
+#     and are not affected (they still need the password). The gate password
+#     is also stripped before the request reaches the backend.
+#   - HSTS is deliberately not set yet (it is sticky if a certificate breaks);
+#     add Strict-Transport-Security once certificates work (docs/deploy.md).
+#   - Alternatives rejected: an IP allow-list (a phone on mobile data has a
+#     changing IP).
+
+(demo_gate) {
+	basicauth {
+		{$FOOD_ORDERS_AUTH_USER} {$FOOD_ORDERS_AUTH_HASH}
+	}
+}
+
+customer.example.com {
+	import demo_gate
+
+	# Same /api/* proxy as dev/Caddyfile, so the apps stay same-origin.
+	handle_path /api/* {
+		# Refuse cross-site requests (see CROSS-SITE note at the top). Inside
+		# handle_path so it runs before reverse_proxy, and after basicauth, so
+		# an unauthenticated request still gets 401. Only `cross-site` is
+		# refused: the apps' own fetch/EventSource send same-origin, and
+		# clients that send no Sec-Fetch-Site header (curl) pass.
+		@xsite header Sec-Fetch-Site cross-site
+		respond @xsite 403
+
+		# Same 64 KB body limit as dev/Caddyfile and dev/nginx.conf
+		# (backend-request-body-limit): a real order is well under 1 KB.
+		# This is the only protection once the backend is reachable from
+		# the public internet instead of just the home wifi.
+		request_body {
+			max_size 64KB
+		}
+		# flush_interval -1: never buffer the response, so the SSE order
+		# stream (/orders/stream) reaches the browser as each event is
+		# written, not in delayed chunks.
+		reverse_proxy localhost:3000 {
+			flush_interval -1
+			# The backend never needs the gate credentials; X-Staff-* pass.
+			header_up -Authorization
+		}
+	}
+
+	# Static build, only for what /api/* did not take. Inside `handle` so the
+	# try_files rewrite below cannot touch /api/* (a bare try_files runs
+	# BEFORE handle_path in Caddy's directive order and turned every
+	# /api/x that is not a file on disk into /index.html).
+	# Flutter web is a single-page app: an unknown path falls back to
+	# index.html instead of 404.
+	handle {
+		root * /var/www/food-orders/customer
+		try_files {path} /index.html
+		file_server
+	}
+
+	# gzip the static build only. Never gzip-encode the /api/* response:
+	# handle_path above already answered and returned for those requests,
+	# but scoping this explicitly keeps the SSE stream from ever being
+	# buffered by a compressor.
+	@static not path /api/*
+	encode @static gzip
+
+	# index.html and the service worker must always be re-checked, or a
+	# deployed update never reaches a returning visitor. Everything else
+	# Flutter builds (main.dart.js, assets/*) has a content hash in its
+	# name, so it is safe to cache hard.
+	@nocache path /index.html /flutter_service_worker.js
+	header @nocache Cache-Control "no-cache"
+
+	# Basic security headers. No Cache-Control override here: the backend
+	# already sets its own on /api/images/* (public, max-age=300).
+	header X-Content-Type-Options "nosniff"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+	# No framing by other sites (clickjacking).
+	header X-Frame-Options "DENY"
+	header Content-Security-Policy "frame-ancestors 'none'"
+}
+
+restaurant.example.com {
+	import demo_gate
+
+	handle_path /api/* {
+		@xsite header Sec-Fetch-Site cross-site
+		respond @xsite 403
+
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy localhost:3000 {
+			flush_interval -1
+			header_up -Authorization
+		}
+	}
+
+	# Static build, only for what /api/* did not take. Inside `handle` so the
+	# try_files rewrite below cannot touch /api/* (a bare try_files runs
+	# BEFORE handle_path in Caddy's directive order and turned every
+	# /api/x that is not a file on disk into /index.html).
+	# Flutter web is a single-page app: an unknown path falls back to
+	# index.html instead of 404.
+	handle {
+		root * /var/www/food-orders/restaurant
+		try_files {path} /index.html
+		file_server
+	}
+
+	@static not path /api/*
+	encode @static gzip
+
+	@nocache path /index.html /flutter_service_worker.js
+	header @nocache Cache-Control "no-cache"
+
+	header X-Content-Type-Options "nosniff"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+	# No framing by other sites (clickjacking).
+	header X-Frame-Options "DENY"
+	header Content-Security-Policy "frame-ancestors 'none'"
+}

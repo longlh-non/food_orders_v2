@@ -95,7 +95,7 @@ Finder inDialog(String text) =>
 
 /// Taps the round "+" on the tile named [name] (on the open tab).
 Future<void> tapTileAdd(WidgetTester tester, String name) async {
-  await tester.tap(find.byTooltip('Add $name'));
+  await tester.tap(find.byTooltip('Thêm $name'));
   await tester.pumpAndSettle();
 }
 
@@ -137,9 +137,9 @@ void main() {
     await tapTileAdd(tester, 'Xôi thịt');
 
     expect(dialog, findsOneWidget);
-    expect(inDialog('Add Xôi thịt'), findsOneWidget);
-    expect(isTicked(tester, 'Extra toppings'), isFalse);
-    expect(isTicked(tester, 'Add drinks'), isFalse);
+    expect(inDialog('Thêm Xôi thịt'), findsOneWidget);
+    expect(isTicked(tester, 'Thêm topping'), isFalse);
+    expect(isTicked(tester, 'Thêm đồ uống'), isFalse);
     expect(Cart.instance.lines, isEmpty);
   });
 
@@ -147,11 +147,11 @@ void main() {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Thêm');
 
     expect(dialog, findsNothing);
     expect(cartLines(), ['Xôi thịt [] x1']);
-    expect(find.text('Added Xôi thịt'), findsOneWidget);
+    expect(find.text('Đã thêm Xôi thịt'), findsOneWidget);
   });
 
   testWidgets('toppings: pick two, the shown total matches the cart', (
@@ -160,8 +160,8 @@ void main() {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Extra toppings');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Thêm topping');
+    await tapInDialog(tester, 'Tiếp');
     expect(inDialog('Thêm chả'), findsOneWidget);
     expect(inDialog('+${formatVnd(8000)}'), findsOneWidget);
     expect(inDialog('Xôi thịt: ${formatVnd(25000)}'), findsOneWidget);
@@ -170,7 +170,7 @@ void main() {
     await tapInDialog(tester, 'Thêm trứng tráng');
     final shown = 'Xôi thịt: ${formatVnd(43000)}';
     expect(inDialog(shown), findsOneWidget);
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Thêm');
 
     expect(cartLines(), ['Xôi thịt [cha, trung] x1']);
     expect(shown, 'Xôi thịt: ${formatVnd(Cart.instance.total)}');
@@ -182,8 +182,8 @@ void main() {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Add drinks');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Thêm đồ uống');
+    await tapInDialog(tester, 'Tiếp');
     expect(inDialog('Trà đá'), findsOneWidget);
     expect(inDialog('Bò húc'), findsOneWidget);
     expect(
@@ -191,7 +191,7 @@ void main() {
           .widget<FilledButton>(
             find.descendant(
               of: dialog,
-              matching: find.widgetWithText(FilledButton, 'Add'),
+              matching: find.widgetWithText(FilledButton, 'Thêm'),
             ),
           )
           .onPressed,
@@ -200,24 +200,24 @@ void main() {
     );
 
     await tapInDialog(tester, 'Trà đá');
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Thêm');
 
     expect(cartLines(), ['Xôi thịt [] x1', 'Trà đá [] x1']);
-    expect(find.text('Added Xôi thịt + Trà đá'), findsOneWidget);
+    expect(find.text('Đã thêm Xôi thịt + Trà đá'), findsOneWidget);
   });
 
   testWidgets('both ticked: toppings step, then drink step', (tester) async {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Extra toppings');
-    await tapInDialog(tester, 'Add drinks');
-    await tapInDialog(tester, 'Next');
-    expect(inDialog('Extra toppings'), findsOneWidget, reason: 'title');
+    await tapInDialog(tester, 'Thêm topping');
+    await tapInDialog(tester, 'Thêm đồ uống');
+    await tapInDialog(tester, 'Tiếp');
+    expect(inDialog('Thêm topping'), findsOneWidget, reason: 'title');
     await tapInDialog(tester, 'Thêm thịt');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Tiếp');
     await tapInDialog(tester, 'Bò húc');
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Thêm');
 
     expect(cartLines(), ['Xôi thịt [thit] x1', 'Bò húc [] x1']);
   });
@@ -226,22 +226,22 @@ void main() {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Extra toppings');
-    await tapInDialog(tester, 'Add drinks');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Thêm topping');
+    await tapInDialog(tester, 'Thêm đồ uống');
+    await tapInDialog(tester, 'Tiếp');
     await tapInDialog(tester, 'Thêm chả');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Tiếp');
     await tapInDialog(tester, 'Trà đá');
 
-    await tapInDialog(tester, 'Back');
+    await tapInDialog(tester, 'Quay lại');
     expect(isTicked(tester, 'Thêm chả'), isTrue);
-    await tapInDialog(tester, 'Back');
-    expect(isTicked(tester, 'Extra toppings'), isTrue);
-    expect(isTicked(tester, 'Add drinks'), isTrue);
+    await tapInDialog(tester, 'Quay lại');
+    expect(isTicked(tester, 'Thêm topping'), isTrue);
+    expect(isTicked(tester, 'Thêm đồ uống'), isTrue);
 
-    await tapInDialog(tester, 'Next');
-    await tapInDialog(tester, 'Next');
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Tiếp');
+    await tapInDialog(tester, 'Tiếp');
+    await tapInDialog(tester, 'Thêm');
     expect(cartLines(), ['Xôi thịt [cha] x1', 'Trà đá [] x1']);
   });
 
@@ -251,13 +251,13 @@ void main() {
       await pumpMenu(tester, await loadedState());
 
       await tapTileAdd(tester, 'Xôi thịt');
-      await tapInDialog(tester, 'Add drinks');
-      await tapInDialog(tester, 'Next');
-      await tapInDialog(tester, 'Back');
+      await tapInDialog(tester, 'Thêm đồ uống');
+      await tapInDialog(tester, 'Tiếp');
+      await tapInDialog(tester, 'Quay lại');
 
-      expect(inDialog('Add Xôi thịt'), findsOneWidget);
-      expect(isTicked(tester, 'Extra toppings'), isFalse);
-      expect(isTicked(tester, 'Add drinks'), isTrue);
+      expect(inDialog('Thêm Xôi thịt'), findsOneWidget);
+      expect(isTicked(tester, 'Thêm topping'), isFalse);
+      expect(isTicked(tester, 'Thêm đồ uống'), isTrue);
     },
   );
 
@@ -265,17 +265,17 @@ void main() {
     await pumpMenu(tester, await loadedState());
 
     await tapTileAdd(tester, 'Xôi thịt');
-    await tapInDialog(tester, 'Extra toppings');
-    await tapInDialog(tester, 'Add drinks');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Thêm topping');
+    await tapInDialog(tester, 'Thêm đồ uống');
+    await tapInDialog(tester, 'Tiếp');
     await tapInDialog(tester, 'Thêm chả');
-    await tapInDialog(tester, 'Next');
+    await tapInDialog(tester, 'Tiếp');
     await tapInDialog(tester, 'Trà đá');
-    await tapInDialog(tester, 'Back');
-    await tapInDialog(tester, 'Back');
-    await tapInDialog(tester, 'Extra toppings');
-    await tapInDialog(tester, 'Add drinks');
-    await tapInDialog(tester, 'Add');
+    await tapInDialog(tester, 'Quay lại');
+    await tapInDialog(tester, 'Quay lại');
+    await tapInDialog(tester, 'Thêm topping');
+    await tapInDialog(tester, 'Thêm đồ uống');
+    await tapInDialog(tester, 'Thêm');
 
     expect(cartLines(), ['Xôi thịt [] x1']);
   });
@@ -290,8 +290,8 @@ void main() {
     testWidgets('Cancel', (tester) async {
       await pumpMenu(tester, await loadedState());
       await tapTileAdd(tester, 'Xôi thịt');
-      await tapInDialog(tester, 'Extra toppings');
-      await tapInDialog(tester, 'Cancel');
+      await tapInDialog(tester, 'Thêm topping');
+      await tapInDialog(tester, 'Hủy');
       await expectNothingAdded(tester);
     });
 
@@ -306,8 +306,8 @@ void main() {
     testWidgets('Escape in the toppings step', (tester) async {
       await pumpMenu(tester, await loadedState());
       await tapTileAdd(tester, 'Xôi thịt');
-      await tapInDialog(tester, 'Extra toppings');
-      await tapInDialog(tester, 'Next');
+      await tapInDialog(tester, 'Thêm topping');
+      await tapInDialog(tester, 'Tiếp');
       await tapInDialog(tester, 'Thêm chả');
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -317,8 +317,8 @@ void main() {
     testWidgets('tap outside in the drink step', (tester) async {
       await pumpMenu(tester, await loadedState());
       await tapTileAdd(tester, 'Xôi thịt');
-      await tapInDialog(tester, 'Add drinks');
-      await tapInDialog(tester, 'Next');
+      await tapInDialog(tester, 'Thêm đồ uống');
+      await tapInDialog(tester, 'Tiếp');
       await tapInDialog(tester, 'Trà đá');
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
@@ -333,10 +333,10 @@ void main() {
 
     Future<void> addWith(String topping) async {
       await tapTileAdd(tester, 'Xôi thịt');
-      await tapInDialog(tester, 'Extra toppings');
-      await tapInDialog(tester, 'Next');
+      await tapInDialog(tester, 'Thêm topping');
+      await tapInDialog(tester, 'Tiếp');
       await tapInDialog(tester, topping);
-      await tapInDialog(tester, 'Add');
+      await tapInDialog(tester, 'Thêm');
     }
 
     await addWith('Thêm chả');
@@ -387,15 +387,15 @@ void main() {
     testWidgets('no toppings on the menu: only "Add drinks"', (tester) async {
       await pumpMenu(tester, await loadedState(toppings: const []));
       await tapTileAdd(tester, 'Xôi thịt');
-      expect(inDialog('Extra toppings'), findsNothing);
-      expect(inDialog('Add drinks'), findsOneWidget);
+      expect(inDialog('Thêm topping'), findsNothing);
+      expect(inDialog('Thêm đồ uống'), findsOneWidget);
     });
 
     testWidgets('no drinks on the menu: only "Extra toppings"', (tester) async {
       await pumpMenu(tester, await loadedState(menu: [xoiThit]));
       await tapTileAdd(tester, 'Xôi thịt');
-      expect(inDialog('Extra toppings'), findsOneWidget);
-      expect(inDialog('Add drinks'), findsNothing);
+      expect(inDialog('Thêm topping'), findsOneWidget);
+      expect(inDialog('Thêm đồ uống'), findsNothing);
     });
 
     testWidgets('a dish with allowToppings false: only "Add drinks"', (
@@ -403,8 +403,8 @@ void main() {
     ) async {
       await pumpMenu(tester, await loadedState());
       await tapTileAdd(tester, 'Xôi ruốc');
-      expect(inDialog('Extra toppings'), findsNothing);
-      expect(inDialog('Add drinks'), findsOneWidget);
+      expect(inDialog('Thêm topping'), findsNothing);
+      expect(inDialog('Thêm đồ uống'), findsOneWidget);
     });
   });
 
@@ -414,22 +414,22 @@ void main() {
 
       await tapTileAdd(tester, 'Xôi thịt');
       expect(tester.takeException(), isNull);
-      await tapInDialog(tester, 'Extra toppings');
-      await tapInDialog(tester, 'Add drinks');
-      await tester.ensureVisible(inDialog('Next'));
-      await tapInDialog(tester, 'Next');
+      await tapInDialog(tester, 'Thêm topping');
+      await tapInDialog(tester, 'Thêm đồ uống');
+      await tester.ensureVisible(inDialog('Tiếp'));
+      await tapInDialog(tester, 'Tiếp');
       expect(tester.takeException(), isNull);
       await tester.ensureVisible(inDialog('Thêm trứng tráng'));
       await tapInDialog(tester, 'Thêm trứng tráng');
       expect(tester.takeException(), isNull);
-      await tester.ensureVisible(inDialog('Next'));
-      await tapInDialog(tester, 'Next');
+      await tester.ensureVisible(inDialog('Tiếp'));
+      await tapInDialog(tester, 'Tiếp');
       expect(tester.takeException(), isNull);
       await tester.ensureVisible(inDialog('Bò húc'));
       await tapInDialog(tester, 'Bò húc');
       expect(tester.takeException(), isNull);
-      await tester.ensureVisible(inDialog('Add'));
-      await tapInDialog(tester, 'Add');
+      await tester.ensureVisible(inDialog('Thêm'));
+      await tapInDialog(tester, 'Thêm');
       expect(tester.takeException(), isNull);
 
       expect(cartLines(), ['Xôi thịt [trung] x1', 'Bò húc [] x1']);

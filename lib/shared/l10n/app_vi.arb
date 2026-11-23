@@ -1,0 +1,319 @@
+{
+  "@@locale": "vi",
+  "appTitleCustomer": "Đặt Món",
+  "@appTitleCustomer": {
+    "description": "Title of the customer app (browser tab, task switcher)."
+  },
+  "appTitleRestaurant": "Đặt Món — Nhà hàng",
+  "@appTitleRestaurant": {
+    "description": "Title of the restaurant (staff) app."
+  },
+  "statusAwaitingPayment": "Chờ thanh toán",
+  "@statusAwaitingPayment": {
+    "description": "Order status chip: waiting for the customer to pay."
+  },
+  "statusPreparing": "Đang chuẩn bị",
+  "@statusPreparing": {
+    "description": "Order status chip: the kitchen is preparing the order."
+  },
+  "statusReady": "Sẵn sàng lấy hàng",
+  "@statusReady": {
+    "description": "Order status chip: ready for pickup."
+  },
+  "statusDelivered": "Đã giao",
+  "@statusDelivered": {
+    "description": "Order status chip: handed over to the customer."
+  },
+  "statusCancelled": "Đã hủy",
+  "@statusCancelled": {
+    "description": "Order status chip: cancelled."
+  },
+  "paymentCash": "Tiền mặt",
+  "@paymentCash": {
+    "description": "Payment method label: cash."
+  },
+  "paymentBankTransfer": "Chuyển khoản",
+  "@paymentBankTransfer": {
+    "description": "Payment method label: bank transfer."
+  },
+  "commonCancel": "Hủy",
+  "@commonCancel": {
+    "description": "Button: close a dialog without doing anything."
+  },
+  "commonConfirm": "Xác nhận",
+  "@commonConfirm": {
+    "description": "Button: confirm a dialog."
+  },
+  "commonSave": "Lưu",
+  "@commonSave": {
+    "description": "Button: save a change."
+  },
+  "commonRetry": "Thử lại",
+  "@commonRetry": {
+    "description": "Button: try a failed action again."
+  },
+  "commonDownload": "Tải xuống",
+  "@commonDownload": {
+    "description": "Button: download the file."
+  },
+  "staffLoginTitle": "Đăng nhập nhân viên",
+  "@staffLoginTitle": {
+    "description": "Title of the staff login dialog."
+  },
+  "staffIdLabel": "Mã nhân viên",
+  "@staffIdLabel": {
+    "description": "Field label: staff ID."
+  },
+  "staffPasswordLabel": "Mật khẩu nhân viên",
+  "@staffPasswordLabel": {
+    "description": "Field label: staff password."
+  },
+  "staffPlainCharsError": "Chỉ dùng chữ không dấu, số và ký hiệu thông thường",
+  "@staffPlainCharsError": {
+    "description": "Error: the staff ID or password has characters browsers cannot send in a header."
+  },
+  "staffWrongCredentials": "Sai mã nhân viên hoặc mật khẩu",
+  "@staffWrongCredentials": {
+    "description": "Error: wrong staff ID or password."
+  },
+  "tooManyTriesLater": "Thử sai quá nhiều lần. Vui lòng thử lại sau.",
+  "@tooManyTriesLater": {
+    "description": "Error: too many wrong staff logins, no wait time known."
+  },
+  "tooManyTriesWait": "Thử sai quá nhiều lần. Thử lại sau {seconds} giây.",
+  "@tooManyTriesWait": {
+    "description": "Error: too many wrong staff logins; {seconds} is how long to wait.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "exportTitle": "Xuất đơn hàng theo tháng",
+  "@exportTitle": {
+    "description": "Title of the export-month dialog."
+  },
+  "exportMonthLabel": "Tháng",
+  "@exportMonthLabel": {
+    "description": "Field label: month to export."
+  },
+  "exportReportLabel": "Loại báo cáo",
+  "@exportReportLabel": {
+    "description": "Field label: which report to export."
+  },
+  "exportSummaryOption": "Báo cáo tổng hợp theo ngày (Excel)",
+  "@exportSummaryOption": {
+    "description": "Report choice: daily summary spreadsheet."
+  },
+  "exportDetailOption": "Chi tiết từng đơn trong tháng (Excel)",
+  "@exportDetailOption": {
+    "description": "Report choice: one row per order for the month."
+  },
+  "exportLinesOption": "Danh sách dòng món (CSV)",
+  "@exportLinesOption": {
+    "description": "Report choice: one row per order line (CSV)."
+  },
+  "exportDisabled": "Chức năng xuất dữ liệu đang tắt trên máy chủ",
+  "@exportDisabled": {
+    "description": "Error: the server has staff export switched off."
+  },
+  "exportNotConfigured": "Chưa cài đặt thông tin quán trên máy chủ",
+  "@exportNotConfigured": {
+    "description": "Error: the shop details are not set up on the server."
+  },
+  "exportFailed": "Không thể xuất dữ liệu. Thử lại.",
+  "@exportFailed": {
+    "description": "Error: the export failed; try again."
+  },
+  "ordersTitle": "Danh sách đơn hàng",
+  "@ordersTitle": {
+    "description": "Title of the restaurant orders screen."
+  },
+  "ordersEmpty": "Chưa có đơn hàng nào. Đang chờ khách…",
+  "@ordersEmpty": {
+    "description": "Message when there are no orders yet."
+  },
+  "ordersEditMenuTooltip": "Chỉnh sửa thực đơn",
+  "@ordersEditMenuTooltip": {
+    "description": "Tooltip of the app-bar button that opens the menu editor."
+  },
+  "ordersExportTooltip": "Xuất đơn hàng theo tháng",
+  "@ordersExportTooltip": {
+    "description": "Tooltip of the app-bar button that opens the export dialog."
+  },
+  "orderNewFrom": "Đơn mới từ {customerName}",
+  "@orderNewFrom": {
+    "description": "Snackbar: a new order arrived from {customerName}.",
+    "placeholders": {
+      "customerName": {
+        "type": "String"
+      }
+    }
+  },
+  "orderNewFromWaitingTransfer": "Đơn mới từ {customerName} — chờ chuyển khoản",
+  "@orderNewFromWaitingTransfer": {
+    "description": "Snackbar: a new order from {customerName} that still waits for a bank transfer.",
+    "placeholders": {
+      "customerName": {
+        "type": "String"
+      }
+    }
+  },
+  "orderUpdateFailed": "Không thể cập nhật đơn hàng. Thử lại.",
+  "@orderUpdateFailed": {
+    "description": "Snackbar: changing an order status failed."
+  },
+  "orderCardTitle": "Đơn #{shortId} — {customerName}",
+  "@orderCardTitle": {
+    "description": "Title of an order card; {shortId} is the last 4 characters of the order id.",
+    "placeholders": {
+      "shortId": {
+        "type": "String"
+      },
+      "customerName": {
+        "type": "String"
+      }
+    }
+  },
+  "orderTotal": "Tổng: {total}",
+  "@orderTotal": {
+    "description": "Total of an order; {total} is already formatted money (for example 25.000 VNĐ).",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "orderMarkReady": "Đánh dấu sẵn sàng",
+  "@orderMarkReady": {
+    "description": "Button: mark a preparing order as ready."
+  },
+  "orderMarkDelivered": "Đánh dấu đã giao",
+  "@orderMarkDelivered": {
+    "description": "Button: mark a ready order as delivered."
+  },
+  "orderUnpaid": "Chưa thanh toán",
+  "@orderUnpaid": {
+    "description": "Text on an order card that has not been paid yet."
+  },
+  "orderTransferContent": "Nội dung chuyển khoản: {reference}",
+  "@orderTransferContent": {
+    "description": "Text on an unpaid transfer order: the transfer content (reference) the customer must type, for example DH482913.",
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "orderPaymentExpired": "Hết hạn thanh toán",
+  "@orderPaymentExpired": {
+    "description": "Text on an order whose payment window ran out."
+  },
+  "orderConfirmTransferReceived": "Đã nhận chuyển khoản",
+  "@orderConfirmTransferReceived": {
+    "description": "Button: staff confirm the bank transfer arrived."
+  },
+  "orderSwitchToCash": "Chuyển sang tiền mặt",
+  "@orderSwitchToCash": {
+    "description": "Button: staff switch an unpaid transfer order to cash."
+  },
+  "payDisabled": "Chức năng đang tắt trên máy chủ",
+  "@payDisabled": {
+    "description": "Snackbar: the payment action is switched off on the server."
+  },
+  "payTryLater": "Thử lại sau.",
+  "@payTryLater": {
+    "description": "Snackbar: too many wrong staff logins, try later."
+  },
+  "payConflict": "Đơn này đã được xử lý",
+  "@payConflict": {
+    "description": "Snackbar: another device already handled this order."
+  },
+  "payFailed": "Không thể cập nhật. Thử lại.",
+  "@payFailed": {
+    "description": "Snackbar: a payment action failed."
+  },
+  "menuEditTitle": "Chỉnh sửa thực đơn",
+  "@menuEditTitle": {
+    "description": "Title of the menu editing screen."
+  },
+  "menuLoadFailed": "Không tải được thực đơn.",
+  "@menuLoadFailed": {
+    "description": "Error: the menu could not be loaded."
+  },
+  "menuEmpty": "Thực đơn đang trống.",
+  "@menuEmpty": {
+    "description": "Message when the menu has no items."
+  },
+  "menuInStock": "Còn hàng",
+  "@menuInStock": {
+    "description": "Stock text of a menu item that is available."
+  },
+  "menuSoldOut": "Hết hàng",
+  "@menuSoldOut": {
+    "description": "Stock text of a menu item that is sold out."
+  },
+  "menuItemSubtitle": "{price} · {stock}",
+  "@menuItemSubtitle": {
+    "description": "Second line of a menu row: {price} is formatted money, {stock} is the stock text.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      },
+      "stock": {
+        "type": "String"
+      }
+    }
+  },
+  "menuEditPriceTooltip": "Sửa giá {name}",
+  "@menuEditPriceTooltip": {
+    "description": "Tooltip of the edit-price button of the menu item {name}.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "menuInStockSemantics": "Còn hàng: {name}",
+  "@menuInStockSemantics": {
+    "description": "Screen-reader label of the in-stock switch of the menu item {name}.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "menuEditPriceTitle": "Sửa giá {name}",
+  "@menuEditPriceTitle": {
+    "description": "Title of the edit-price dialog for the menu item {name}.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "menuPriceLabel": "Giá (VNĐ)",
+  "@menuPriceLabel": {
+    "description": "Field label: price in Vietnamese đồng."
+  },
+  "menuPriceRangeError": "Nhập số nguyên từ 0 đến 1.000.000",
+  "@menuPriceRangeError": {
+    "description": "Error under the price field: not a whole number from 0 to 1,000,000."
+  },
+  "menuPriceInvalid": "Giá không hợp lệ. Nhập số nguyên từ 0 đến 1.000.000",
+  "@menuPriceInvalid": {
+    "description": "Error after a save: the server refused the price."
+  },
+  "menuEditingDisabled": "Chức năng sửa thực đơn đang tắt trên máy chủ",
+  "@menuEditingDisabled": {
+    "description": "Error: menu editing is switched off on the server."
+  },
+  "menuItemNotFound": "Không tìm thấy món này. Hãy tải lại trang.",
+  "@menuItemNotFound": {
+    "description": "Error: the menu item no longer exists on the server."
+  },
+  "menuSaveFailed": "Không lưu được. Thử lại.",
+  "@menuSaveFailed": {
+    "description": "Error: the menu change could not be saved."
+  }
+}

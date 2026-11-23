@@ -57,3 +57,7 @@ Agents cannot run Actions. Flutter web builds are slow, not a local gate; owner 
 Every recommendation was accepted ("all recommended"): D1–D4 and D6–D13, HOST3 = A (shared Caddy `basic_auth`) and HOST5 = backups yes. The record, with reasons, is `docs/ci-cd-decisions.md`. Treat those as settled.
 
 Still open: HOST1 (provider), D5 (which follows from HOST1) and HOST2 (domain). The GitHub remote exists (`origin` → `github.com/longlh-non/food_orders`, checked 2026-11-13). Edits to `.github/**` or `deploy/**` still need the owner's explicit approval when this card runs.
+
+## Deviation recorded 2026-11-22 (found while executing)
+
+The Goal above names `dart compile exe backend/bin/server.dart -o build/food-orders-backend`. That command **fails** on this backend (`'dart compile' does not support build hooks ... Packages with build hooks: sqlite3`, exit 255, checked locally with Dart 3.14). The workflow uses `dart build cli -t bin/server.dart -o ../build/backend` from `backend/` instead (exit 0; output is `bundle/bin/server` plus `bundle/lib/*.so`). The same applies to the install comment in `deploy/food-orders-backend.service` and to `cd-server-deploy-script`: follow-up needed there (the unit points at a single file, but a `dart build cli` bundle needs its `lib/*.so` beside the binary).

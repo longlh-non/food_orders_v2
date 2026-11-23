@@ -1,0 +1,95 @@
+# systemd unit for the backend (backend/bin/server.dart), run from a
+# built bundle (`dart build cli`). The full, current steps are in
+# docs/deploy.md; this is a summary. Owner-run on the VM, none of it runs from
+# this repo:
+#
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin food-orders
+#   sudo mkdir -p /var/lib/food-orders/images
+#   sudo chown -R food-orders:food-orders /var/lib/food-orders
+#   sudo chmod 700 /var/lib/food-orders /var/lib/food-orders/images
+#   # Build the backend ON THE VM so its CPU architecture matches (Oracle
+#   # Ampere is ARM, e2-micro is x86_64; the result is not portable).
+#   # `dart compile exe` does NOT work here: the sqlite3 package uses a build
+#   # hook and `dart compile` refuses it. Use `dart build cli`, which makes a
+#   # "bundle": bin/server plus lib/*.so (libsqlite3.so, libdartaotserver.so).
+#   # The binary needs those .so files beside it, so keep the WHOLE bundle:
+#   cd backend && dart pub get && dart build cli -t bin/server.dart -o "$HOME/food-orders-build"
+#   sudo mkdir -p /opt/food-orders/bundle
+#   sudo rsync -a --delete "$HOME/food-orders-build/bundle/" /opt/food-orders/bundle/
+#   sudo chown -R root:root /opt/food-orders
+#   sudo chmod -R go+rX /opt/food-orders
+#   # root-owned and not writable by the service user; world-readable so the
+#   # food-orders user can run it (no secrets live under /opt/food-orders).
+#   sudo mkdir -p /etc/food-orders
+#   # Create the file empty with the right owner and mode BEFORE typing
+#   # secrets into it, then edit it (STAFF_ID=... / STAFF_PASSWORD=..., see
+#   # CLAUDE.md "Staff ID and password"):
+#   sudo install -m 600 -o food-orders -g food-orders /dev/null /etc/food-orders/backend.env
+#   sudoedit /etc/food-orders/backend.env
+#   sudo cp deploy/food-orders-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now food-orders-backend
+#
+# The images directory must exist (and be owned by food-orders) BEFORE the
+# first start: ReadOnlyPaths below makes it read-only to this service, so
+# the backend's own `Directory(...).createSync()` call cannot create it.
+# The owner copies photos into it as a different user (see CLAUDE.md
+# "Adding a picture"), e.g. with rsync from deploy/build.sh's host.
+#
+# Never commit /etc/food-orders/backend.env or any file holding STAFF_ID /
+# STAFF_PASSWORD. It lives on the server only (mode 600, owned by the
+# service user), per CLAUDE.md "Safety policy".
+
+[Unit]
+Description=food_orders backend (shelf API + SQLite)
+After=network.target
+
+[Service]
+Type=simple
+User=food-orders
+Group=food-orders
+WorkingDirectory=/opt/food-orders/bundle
+ExecStart=/opt/food-orders/bundle/bin/server
+
+# A built bundle must set these: the defaults in bin/server.dart are found
+# relative to the source tree and only make sense for `dart run` (see
+# CLAUDE.md "Storage" for ORDERS_DB and "Adding a picture" for IMAGES_DIR).
+Environment=ORDERS_DB=/var/lib/food-orders/orders.db
+Environment=IMAGES_DIR=/var/lib/food-orders/images
+# BIND_ADDRESS is intentionally NOT set: bin/server.dart already defaults to
+# loopback-only (InternetAddress.loopbackIPv4) unless BIND_ADDRESS is set to
+# a non-empty value, so only Caddy (on the same machine) can reach port
+# 3000. Do not add BIND_ADDRESS=0.0.0.0 here.
+
+# STAFF_ID / STAFF_PASSWORD only (see CLAUDE.md "Staff ID and password").
+# This file is created on the server by hand; it is never in this repo.
+EnvironmentFile=/etc/food-orders/backend.env
+
+Restart=on-failure
+RestartSec=5
+
+# Hardening. Data at rest (P2-1, docs/reviews/security-backend-orders-sqlite-storage.md):
+# UMask 0077 so a newly created orders.db/WAL file isn't world-readable.
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/food-orders
+# The backend only reads pictures; it never writes to the images folder.
+ReadOnlyPaths=/var/lib/food-orders/images
+PrivateTmp=true
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+# Run `systemd-analyze security food-orders-backend` on the server after
+# install; tighten or loosen the above if it flags something this list
+# missed, or if a hardening option turns out to break the built bundle
+# (not verified here — no systemd available to this agent).
+
+[Install]
+WantedBy=multi-user.target

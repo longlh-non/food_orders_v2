@@ -22,8 +22,29 @@ List<String> recentMonths(DateTime now) => [
     }(),
 ];
 
+/// What the "Loại báo cáo" dropdown offers: the label, the file name and the
+/// MIME type for each [ExportReport].
+extension on ExportReport {
+  String get label => switch (this) {
+    ExportReport.summary => 'Báo cáo tổng hợp theo ngày (Excel)',
+    ExportReport.detail => 'Chi tiết từng đơn trong tháng (Excel)',
+    ExportReport.lines => 'Danh sách dòng món (CSV)',
+  };
+
+  String fileName(String month) => switch (this) {
+    ExportReport.summary => 'bao-cao-tong-hop-$month.xlsx',
+    ExportReport.detail => 'chi-tiet-$month.xlsx',
+    ExportReport.lines => 'orders-$month.csv',
+  };
+
+  String get mimeType => switch (this) {
+    ExportReport.lines => 'text/csv;charset=utf-8',
+    _ => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+}
+
 /// Opens the "Export month" dialog: pick a month, type the staff ID and
-/// password, download that month's orders as `orders-YYYY-MM.csv`.
+/// password, choose a report (two Excel reports or the CSV), download it.
 ///
 /// The staff ID and password are kept only in memory
 /// ([StaffCredentialsHolder]) so staff type them once per visit; wrong ones
@@ -70,6 +91,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
   late final _password = TextEditingController(
     text: StaffCredentialsHolder.instance.value?.password ?? '',
   );
+  var _report = ExportReport.summary;
   var _busy = false;
   String? _error;
 
@@ -96,7 +118,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
       // Checked here: a browser would refuse such a header and it would
       // look like a network failure.
       setState(
-        () => _error = 'Use plain letters, digits and symbols, no accents',
+        () => _error = 'Chỉ dùng chữ không dấu, số và ký hiệu thông thường',
       );
       return;
     }
@@ -107,10 +129,11 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
     try {
       final bytes = await widget.client.fetchMonth(
         _month,
+        report: _report,
         credentials: credentials,
       );
       StaffCredentialsHolder.instance.value = credentials;
-      widget.saveFile(bytes, 'orders-$_month.csv', 'text/csv;charset=utf-8');
+      widget.saveFile(bytes, _report.fileName(_month), _report.mimeType);
       if (mounted) Navigator.of(context).pop();
     } on ExportException catch (e) {
       if (!mounted) return;
@@ -123,16 +146,18 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             StaffCredentialsHolder.instance.clear();
             _id.clear();
             _password.clear();
-            _error = 'Wrong staff ID or password';
+            _error = 'Sai mã nhân viên hoặc mật khẩu';
           case ExportFailure.disabled:
-            _error = 'Export is turned off on the server';
+            _error = 'Chức năng xuất dữ liệu đang tắt trên máy chủ';
           case ExportFailure.tooManyTries:
             final wait = e.retryAfterSeconds;
             _error = wait == null
-                ? 'Too many wrong tries. Try again later.'
-                : 'Too many wrong tries. Try again in $wait seconds.';
+                ? 'Thử sai quá nhiều lần. Vui lòng thử lại sau.'
+                : 'Thử sai quá nhiều lần. Thử lại sau $wait giây.';
+          case ExportFailure.notConfigured:
+            _error = 'Chưa cài đặt thông tin quán trên máy chủ';
           case ExportFailure.other:
-            _error = "Couldn't export. Try again.";
+            _error = 'Không thể xuất dữ liệu. Thử lại.';
         }
       });
     } on Object {
@@ -141,7 +166,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = "Couldn't export. Try again.";
+        _error = 'Không thể xuất dữ liệu. Thử lại.';
       });
     }
   }
@@ -153,7 +178,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
         _id.text.trim().isNotEmpty &&
         _password.text.trim().isNotEmpty;
     return AlertDialog(
-      title: const Text('Export month'),
+      title: const Text('Xuất đơn hàng theo tháng'),
       // Scrolls at large text; the buttons stay visible.
       scrollable: true,
       content: Column(
@@ -162,7 +187,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
         children: [
           DropdownButtonFormField<String>(
             initialValue: _month,
-            decoration: const InputDecoration(labelText: 'Month'),
+            decoration: const InputDecoration(labelText: 'Tháng'),
             items: [
               for (final m in widget.months)
                 DropdownMenuItem(value: m, child: Text(m)),
@@ -170,6 +195,23 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             onChanged: _busy
                 ? null
                 : (m) => setState(() => _month = m ?? _month),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<ExportReport>(
+            initialValue: _report,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Loại báo cáo'),
+            items: [
+              for (final r in [
+                ExportReport.summary,
+                ExportReport.detail,
+                ExportReport.lines,
+              ])
+                DropdownMenuItem(value: r, child: Text(r.label)),
+            ],
+            onChanged: _busy
+                ? null
+                : (r) => setState(() => _report = r ?? _report),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -180,7 +222,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             // live in memory only, not in every device's password manager.
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Staff ID'),
+            decoration: const InputDecoration(labelText: 'Mã nhân viên'),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -190,7 +232,7 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
             autocorrect: false,
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Staff password'),
+            decoration: const InputDecoration(labelText: 'Mật khẩu nhân viên'),
             onSubmitted: (_) {
               if (canDownload) _download();
             },
@@ -210,11 +252,11 @@ class _ExportMonthDialogState extends State<_ExportMonthDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Hủy'),
         ),
         FilledButton(
           onPressed: canDownload ? _download : null,
-          child: const Text('Download'),
+          child: const Text('Tải xuống'),
         ),
       ],
     );

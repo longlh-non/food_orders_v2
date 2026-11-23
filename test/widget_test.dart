@@ -8,11 +8,11 @@ void main() {
   // grid are tested in menu_page_test.dart with an injected MenuState.
   testWidgets('Customer app renders menu page', (tester) async {
     await tester.pumpWidget(const CustomerApp());
-    expect(find.text('Menu'), findsOneWidget);
+    expect(find.text('Thực đơn'), findsOneWidget);
   });
 
   testWidgets('Restaurant app renders orders page', (tester) async {
     await tester.pumpWidget(const RestaurantApp());
-    expect(find.text('Incoming Orders'), findsOneWidget);
+    expect(find.text('Danh sách đơn hàng'), findsOneWidget);
   });
 }

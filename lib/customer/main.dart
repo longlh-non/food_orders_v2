@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../shared/api/order_repository.dart';
+import '../shared/l10n.dart';
 import '../shared/theme.dart';
 import 'pages/menu_page.dart';
 import 'state/menu_state.dart';
@@ -14,6 +15,8 @@ import 'state/menu_state.dart';
 /// so the UI shows while the first HTTP fetch and SSE subscription are set
 /// up in the background.
 void main() {
+  // Restore the saved language first, so the first frame is already in it.
+  LocaleController.instance.init();
   OrderRepository.instance.init();
   // Fire-and-forget like init(): the menu page shows a spinner until it
   // arrives, or an error with Retry if the backend is down.
@@ -21,15 +24,25 @@ void main() {
   runApp(const CustomerApp());
 }
 
+/// The root widget of the customer app: a `MaterialApp` with the customer
+/// theme whose home screen is the menu page.
 class CustomerApp extends StatelessWidget {
   const CustomerApp({super.key});
 
+  /// Builds the `MaterialApp`. It watches only the chosen language; each page watches its own state.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Food Orders',
-      theme: customerTheme(),
-      home: const MenuPage(),
+    // Rebuilds the MaterialApp when the user picks another language.
+    return ListenableBuilder(
+      listenable: LocaleController.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'Đặt Món',
+        theme: customerTheme(),
+        locale: LocaleController.instance.locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const MenuPage(),
+      ),
     );
   }
 }

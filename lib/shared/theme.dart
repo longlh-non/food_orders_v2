@@ -46,5 +46,6 @@ ThemeData customerTheme() => ThemeData(
   ),
 );
 
+/// Unlike [customerTheme], adds no custom `cardTheme` — see there for why.
 ThemeData restaurantTheme() =>
     ThemeData(colorScheme: _brandScheme(), useMaterial3: true);

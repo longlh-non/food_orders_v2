@@ -152,6 +152,9 @@ class OrderRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cancels the SSE subscription so it can't deliver events after
+  /// disposal. In practice this singleton lives for the app's lifetime and
+  /// is never disposed; this exists to satisfy ChangeNotifier's contract.
   @override
   void dispose() {
     _subscription?.cancel();

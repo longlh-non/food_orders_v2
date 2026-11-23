@@ -171,6 +171,23 @@ void main() {
       expect(PaymentMethod.cash.label, 'Tiền mặt');
       expect(PaymentMethod.bank_transfer.label, 'Chuyển khoản');
     });
+
+    test('every status label is Vietnamese now, not the old English text', () {
+      // The labels this card replaced (lib/shared/models/order.dart,
+      // `vi-translate-shared-and-restaurant-ui`). Kept here so a future
+      // revert is caught by a test, not just by eye.
+      const oldEnglish = {
+        OrderStatus.awaiting_payment: 'Awaiting payment',
+        OrderStatus.preparing: 'Preparing',
+        OrderStatus.ready: 'Ready for pickup',
+        OrderStatus.delivered: 'Delivered',
+        OrderStatus.cancelled: 'Cancelled',
+      };
+      for (final s in OrderStatus.values) {
+        expect(s.label, isNotEmpty);
+        expect(s.label, isNot(oldEnglish[s]), reason: '$s still in English');
+      }
+    });
   });
 
   group('payment calls', () {

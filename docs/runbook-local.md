@@ -3,7 +3,7 @@
 Every task you do by hand, in one place: start, restart, back up, upgrade, configure, check. Commands are copy-paste. Run them from the project folder (`~/flutter_projects/food_orders`) unless a step says otherwise.
 
 - `CLAUDE.md` stays the full reference (API, order rules, menu examples). This page links to it instead of repeating long parts.
-- The hosted server (VM) will get its own guide, `docs/deploy.md`, once the deploy cards run.
+- The hosted server (VM) has its own guide: `docs/deploy.md`.
 
 Prerequisite in every new terminal (already in `~/.bashrc`):
 
@@ -27,7 +27,8 @@ read -r STAFF_ID && read -rs STAFF_PASSWORD && export STAFF_ID STAFF_PASSWORD &&
 
 - It waits for two lines: type the staff ID and press Enter, then the staff password and press Enter. The ID is shown as you type; the password isn't (see section 4).
 - To start without staff editing, just run `dart run bin/server.dart`.
-- It prints where the database and pictures are, and whether staff routes are `enabled` or `disabled`.
+- It prints where the database and pictures are, whether staff routes are `enabled` or `disabled`, and whether the shop details for reports and bank transfer are `enabled` or `disabled`.
+- For bank transfer and the summary report it also needs the shop and bank settings: see section 4a. Without them the app still works with cash only.
 
 **2. Customer app** (port 8080):
 
@@ -52,7 +53,7 @@ flutter run -t lib/dev/demo.dart -d chrome --web-port=8082
 ```
 
 Why this order: the apps load the menu and orders from the backend when they open.
-- **Backend not up yet:** the customer menu shows "Couldn't load the menu" with **Retry**. The live order stream reconnects by itself every few seconds.
+- **Backend not up yet:** the customer menu shows "Không tải được thực đơn" with **Thử lại** (retry). The live order stream reconnects by itself every few seconds.
 - **Once the backend is up:** tap Retry or reload the page.
 
 ---
@@ -84,13 +85,15 @@ About `r` and `R` in the `flutter run` terminal: Flutter 3.47 lists **`r` = hot 
 - Menu pictures are in `backend/data/images/`. `IMAGES_DIR=/path` overrides it.
 - Both are git-ignored (they hold customer names and your photos); never commit them.
 
-**Schema version:** the database upgrades itself step by step on start. It's at **version 6** now:
+**Schema version:** the database upgrades itself step by step on start. It's at **version 8** now:
 - 1: orders;
 - 2: menu;
 - 3: categories and toppings;
 - 4: Ăn vặt;
 - 5: pictures;
-- 6: sold-out.
+- 6: sold-out;
+- 7: how an order is paid (`payment_method`, `payment_due_at`; old orders read as cash);
+- 8: old `pending` and `accepted` orders become `preparing`. **This can't be undone**, so back up first. Restart the backend before you reload the apps, so the upgrade has run.
 
 Check it with `sqlite3 backend/data/orders.db "PRAGMA user_version"`. A failed step rolls back completely and leaves the old version.
 
@@ -131,15 +134,33 @@ sqlite3 backend/data/orders.db ".backup backend/data/orders.$(date +%F-%H%M).db"
 
 - The restaurant screen shows only the newest 500 orders.
 
+**Mock orders for testing the Excel reports** (dev only; adds `delivered` and `cancelled` orders with ids starting `mock-`, built from your current menu):
+1. Stop the backend and make a dated backup (see **Backup** above).
+2. Run it from the project root. It prints the database path and asks you to type `yes`:
+
+   ```bash
+   dart run backend/bin/seed_mock_orders.dart                      # last full month, added to what is there
+   dart run backend/bin/seed_mock_orders.dart --month=2026-10      # a month you choose
+   dart run backend/bin/seed_mock_orders.dart --month=2026-10 --clean   # first delete earlier mock- orders
+   ```
+
+   `--db=PATH` picks another file (default: `ORDERS_DB`, else `backend/data/orders.db`); `--yes` skips the question. Running it twice without `--clean` doubles that month's mock data.
+3. It refuses to run if the total would reach the 10,000-order limit.
+4. Remove all mock orders again (backend stopped):
+
+   ```bash
+   sqlite3 backend/data/orders.db "DELETE FROM orders WHERE id LIKE 'mock-%'"
+   ```
+
 **Never delete `orders.db` to "re-seed".** That wipes every order and resets the menu to the starting list.
 
 ---
 
 ## 4. Staff ID and password
 
-Staff-only routes need one shared staff ID and password, set when the backend starts. Today they are the month export (the restaurant app's "Export month" button, `GET /api/orders/export`) and changing a price or sold-out (`PATCH /api/menu/<id>`).
+Staff-only routes need one shared staff ID and password, set when the backend starts. Today they are the month export (the restaurant app's download button, "Xuất đơn hàng theo tháng", `GET /api/orders/export`), changing a price or sold-out (`PATCH /api/menu/<id>`), and the two staff payment buttons in the restaurant app ("Đã nhận chuyển khoản" and "Chuyển sang tiền mặt").
 
-**What changed for you:** the old `STAFF_TOKEN` is no longer used. Start the backend with `STAFF_ID` and `STAFF_PASSWORD`, otherwise the export and menu edits stay off (403).
+**What changed for you:** the old `STAFF_TOKEN` is no longer used. Start the backend with `STAFF_ID` and `STAFF_PASSWORD`, otherwise the export, menu edits and the staff payment buttons stay off (403).
 
 - **Choose them once and keep them safe** (password manager).
   - The ID is 1–64 characters, e.g. `staff`.
@@ -167,7 +188,7 @@ Staff-only routes need one shared staff ID and password, set when the backend st
   2. Start it again with new values, using the `read` line above.
   3. Check them (below), then tell staff the new pair.
 
-  There's nowhere else they're stored, so there's nothing to clean up in the database. The old pair stops working at once. An open restaurant tab says "Wrong staff ID or password" until the new pair is typed.
+  There's nowhere else they're stored, so there's nothing to clean up in the database. The old pair stops working at once. An open restaurant tab says "Sai mã nhân viên hoặc mật khẩu" until the new pair is typed.
 - **Never** write them into a file inside the project, and never commit them.
 - **They cross your wifi in plain text.** `http://restaurant.local` has no HTTPS, so anyone on the same network who captures traffic could read them, and with them download customer names. Use them only on a wifi you trust until HTTPS is set up (for hosting, see the deploy cards).
 - **Example edit** (this marks Trà đá sold out):
@@ -234,15 +255,82 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 - `ps` doesn't show environment variables. Don't look in `/proc/<pid>/environ`: it prints the password in clear text. Never paste its output anywhere.
 - If unsure, stop the backend and start it again from a terminal where steps 1–3 pass.
 
-**5. In the restaurant app:** open "Export month" and type the ID and password.
-- **"Wrong staff ID or password":** 401, a wrong pair. Both fields are cleared.
-- **"Too many wrong tries. Try again in N seconds."** (or "…Try again later."): 429, locked.
-- **"Export is turned off on the server":** 403, the backend was started without valid values.
-- **"Use plain letters, digits and symbols, no accents":** the typed value has characters a browser can't send.
+**5. In the restaurant app:** open the download button ("Xuất đơn hàng theo tháng") and type the ID and password.
+- **"Sai mã nhân viên hoặc mật khẩu":** 401, a wrong pair. Both fields are cleared.
+- **"Thử sai quá nhiều lần. Thử lại sau N giây."** (or "…Vui lòng thử lại sau."): 429, locked.
+- **"Chức năng xuất dữ liệu đang tắt trên máy chủ":** 403, the backend was started without valid values.
+- **"Chỉ dùng chữ không dấu, số và ký hiệu thông thường":** the typed value has characters a browser can't send.
 
 The app remembers the pair only until the page is reloaded. The browser's password manager doesn't save it, on purpose: the tablet may be shared.
 
 The variables themselves are listed in section 9.
+
+---
+
+## 4a. Shop and bank settings
+
+Nine settings tell the backend your shop details (for the summary report) and your bank account (for bank transfer). They are read **once, when the backend starts**, so after any change you restart it. Details and rules: `CLAUDE.md` → "Shop and bank settings".
+
+| Variable | What it is | Rule |
+|---|---|---|
+| `SHOP_NAME` | first line of the summary report, written exactly as you type it | up to 200 characters |
+| `SHOP_TAX_CODE` | tax code | digits and `-`, up to 20 characters |
+| `SHOP_ADDRESS` | address | up to 200 characters |
+| `SHOP_LOCATION` | business location | up to 200 characters |
+| `SHOP_REPRESENTATIVE` | name under the signature line | up to 100 characters |
+| `BANK_BIN` | your bank's 6-digit id | exactly 6 digits |
+| `BANK_ACCOUNT` | account number | digits only, up to 19 |
+| `BANK_ACCOUNT_NAME` | account holder name shown to the customer | up to 100 characters |
+| `BANK_NAME` | bank name shown to the customer | up to 100 characters |
+
+- **What switches on:** all five `SHOP_*` = the summary report; all four `BANK_*` = bank transfer. If one value is missing or wrong, only that feature stays off and the backend still starts.
+- **Where to put them:** nowhere in the project. Type them at the start command (below) so they stay out of your shell history and out of every file. **Never commit them.** (On a hosted server they go in the service's environment file instead: see `docs/deploy.md`.)
+- **Start with them** (stop the backend first if it runs, Ctrl+C):
+
+  ```bash
+  cd backend
+  read -r STAFF_ID && read -rs STAFF_PASSWORD && export STAFF_ID STAFF_PASSWORD
+  for v in SHOP_NAME SHOP_TAX_CODE SHOP_ADDRESS SHOP_LOCATION SHOP_REPRESENTATIVE \
+           BANK_BIN BANK_ACCOUNT BANK_ACCOUNT_NAME BANK_NAME; do
+    read -r -p "$v: " "$v" && export "$v"
+  done
+  dart run bin/server.dart
+  ```
+
+  It asks for the staff ID and password first, then each setting by name; type the value and press Enter. Accents are fine in the shop and bank texts. A value with only spaces or empty counts as not set.
+- **Check:** read the two startup lines. Good: `shop details for reports: enabled` and `bank transfer: enabled`. Otherwise `disabled (missing or invalid: ...)` lists the variable **names** to fix; values are never printed. Stop the backend, start it again and re-type.
+- **Try it:** with `bank transfer: enabled`, place a bank-transfer order in the customer app. The page should show a QR, the bank name, account number, account name, the amount and a transfer content like `DH` + 6 digits. In the restaurant app the same order shows "Chưa thanh toán" and the buttons "Đã nhận chuyển khoản" and "Chuyển sang tiền mặt".
+- **Unverified (owner acceptance):** scanning the QR with a real banking app and seeing the right account and amount. Agents can't scan. Try a small amount yourself.
+- **How payment works for staff:**
+  - Look in your bank app for the transfer content shown on the card; when the money is there, tap "Đã nhận chuyển khoản".
+  - After 5 minutes without payment the order is cancelled by the server. The customer can switch to cash or get a new QR within 15 minutes of that; you can switch an expired order to cash at any time ("Chuyển sang tiền mặt").
+  - A transfer that arrives late (or twice) is sorted out by hand in your bank app; the app never moves money and can't confirm a cancelled order.
+
+---
+
+## 4b. Download the monthly reports
+
+In the restaurant app, press the download button in the top bar ("Xuất đơn hàng theo tháng"), choose the month and the report, type the staff ID and password, then "Tải xuống".
+
+| Choice | File | Needs |
+|---|---|---|
+| "Báo cáo tổng hợp theo ngày (Excel)" (preselected) | `bao-cao-tong-hop-YYYY-MM.xlsx` (sheets `gộp` and `tách`) | the five `SHOP_*` settings (section 4a); otherwise "Chưa cài đặt thông tin quán trên máy chủ" |
+| "Chi tiết từng đơn trong tháng (Excel)" | `chi-tiet-YYYY-MM.xlsx` | nothing extra |
+| "Danh sách dòng món (CSV)" | `orders-YYYY-MM.csv` | nothing extra |
+
+- Both Excel reports count only **`delivered`** orders, and put each order on the day written in its `placedAt` (the customer's phone clock). They show no customer names. The summary lists every day of the month (0 on days without orders); the detail report skips days without orders.
+- The CSV lists every order line with all statuses and customer names. Keep it private.
+- **From a terminal** instead (put a real month; the staff ID and password must be set in that terminal, see section 4):
+
+  ```bash
+  curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o bao-cao-tong-hop-2026-11.xlsx "http://customer.local/api/orders/export?month=2026-11&report=summary"
+  curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o chi-tiet-2026-11.xlsx "http://customer.local/api/orders/export?month=2026-11&report=detail"
+  curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o orders-2026-11.csv "http://customer.local/api/orders/export?month=2026-11"
+  ```
+
+- **No data to try it on?** Add fake orders with the mock tool (section 3), then delete them again.
+- Old USD test orders (prices like `9.5`) don't add up in Vietnamese Excel; delete them first (after a backup).
+- **Unverified (owner acceptance):** that Excel shows the reports like your sample files. Agents can't open Excel.
 
 ---
 
@@ -300,29 +388,34 @@ Run these from the project folder. `make check` runs them all, in the same order
 
 ## 7. CI today
 
-- GitHub Actions runs `make check` on every push and pull request (`.github/workflows/ci.yml`).
+- GitHub Actions runs `make check` on pushes to `main` and on every pull request (`.github/workflows/ci.yml`). A push to a PR branch is now designed to trigger exactly one run (via `pull_request`), not two: before `ci-dependabot-and-triggers` landed, `on: push` (all branches) plus `on: pull_request` ran the same gate twice for every PR branch push.
+- **Dependabot** (`.github/dependabot.yml`) checks weekly for updates to GitHub Actions (`/`) and the Dart packages in `/` (the Flutter app) and `/backend`, each capped at 3 open pull requests. Every Dependabot PR runs the same `make check` gate as any other PR. It does **not** bump the Flutter version in `ci.yml` (`flutter-version`) — see the comment next to that line; the owner updates it by hand together with their local Flutter. A `sqlite3` bump (in `backend/pubspec.yaml`) changes the precompiled binary its build hook downloads, so that PR always needs a human look before merging — never auto-merge it.
+- **Build job (`ci-build-artifacts`):** after `check` passes, a second job `build` runs `bash deploy/build.sh` (both web apps), compile-checks the backend with `dart build cli` (not `dart compile exe`, which refuses the `sqlite3` build hook; the bundle is **not** uploaded), checks the web builds for `.env*` files and the words `STAFF_ID` / `STAFF_PASSWORD`, then uploads `customer-web` and `restaurant-web` as separate artifacts kept 7 days. Only `contents: read`, no secrets. **Unverified until pushed:** this job has never run on GitHub, so the artifacts and their `index.html` are not confirmed yet.
 - The GitHub remote is `origin` → `https://github.com/longlh-non/food_orders.git` (from `git remote -v`).
 - **At the time of writing (2026-11-19):** two commits are pushed, the latest being `de44cc3` "App demo 1st version". `git status -sb` showed `main...origin/main`, so nothing is waiting to be pushed.
 - Work done after that commit is still uncommitted on this laptop, and CI checks it only once you commit and push it.
 - `git status` shows what's uncommitted. Agents never commit or push unless you ask.
+- **Unverified until the owner pushes:** that a PR branch push now starts exactly one run, and that Dependabot opens its weekly pull requests.
 
 ---
 
 ## 8. Deploy (CD) status
 
-**Not built yet.** The decisions so far are in `docs/ci-cd-decisions.md`. Hosting is still open (HOST1 provider, HOST2 domain). The pending cards in `docs/tasks/`:
+**Deploy guide:** the step-by-step server guide is `docs/deploy.md` (written, **not yet followed on a real VM, so unverified**). It covers the VM, firewall, Caddy and the shared password, the backend service, DNS, releases and backups. Going to the public internet is covered there; this runbook is for your own machine.
+
+**Automatic CD is not built yet.** CI builds both web apps and compile-checks the backend (section 7, unverified until pushed and run on GitHub), but nothing is deployed from it; releases are by hand as in `docs/deploy.md`. Note the backend is built with `dart build cli` (not `dart compile exe`), on the VM, so its CPU architecture matches. HOST1 (provider) and HOST2 (domain) are still open owner decisions. The decisions so far are in `docs/ci-cd-decisions.md`. The cards in `docs/tasks/`:
 
 | Card | What it adds |
 |---|---|
 | `ci-dependabot-and-triggers` | CI runs once per change; weekly dependency-update pull requests. |
-| `ci-build-artifacts` | CI builds both web apps and the backend after the checks pass. |
+| `ci-build-artifacts` | CI builds both web apps and compile-checks the backend after the checks pass (web builds uploaded; backend binary not, D5). |
 | `deploy-production-config` | Production Caddy config, services, backups for the server. |
 | `deploy-demo-access-gate` | A shared password on the public demo. |
-| `deploy-runbook` | `docs/deploy.md`, the server guide (links here). |
+| `deploy-runbook` | `docs/deploy.md`, the server guide (links here); landed, unverified on a real server. |
 | `cd-server-deploy-script` | A deploy script on the server: back up, switch release, health check, roll back. |
 | `cd-github-deploy-workflow` | Deploy from GitHub when you push a version tag, after your approval. |
 
-These cards update sections 7 and 8 here when they land.
+Status (2026-11-23): the first five cards are done (in `docs/tasks/done/`); only `cd-server-deploy-script` and `cd-github-deploy-workflow` are still open. The open ones update sections 7 and 8 here when they land.
 
 ---
 
@@ -337,6 +430,8 @@ These cards update sections 7 and 8 here when they land.
 | `STAFF_ID` | unset (staff routes off) | The shared staff ID: 1–64 printable ASCII characters (section 4). |
 | `STAFF_PASSWORD` | unset (staff routes off) | The shared staff password: at least 12 printable ASCII characters (section 4). Both must be set for staff routes to work. |
 | `STAFF_TOKEN` | — | No longer used; ignored. If it's set, the backend prints a note at start. |
+| `SHOP_NAME`, `SHOP_TAX_CODE`, `SHOP_ADDRESS`, `SHOP_LOCATION`, `SHOP_REPRESENTATIVE` | unset (summary report off) | The shop details on the summary report; all five needed (section 4a). |
+| `BANK_BIN`, `BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`, `BANK_NAME` | unset (bank transfer off) | The bank account for bank transfer; all four needed (section 4a). |
 | `BIND_ADDRESS` | `127.0.0.1` | Where the backend listens. Keep the default unless you're behind a firewall. |
 
 **Files and folders:**
@@ -370,3 +465,5 @@ These cards update sections 7 and 8 here when they land.
 - **Proxy, mDNS and services:** the Caddy and nginx reloads, mDNS and the systemd services. Agents can't run `sudo`.
 - **Phones:** anything on the iPhone.
 - **Order store:** the "storage full" clean-up on real data.
+- **Bank transfer QR:** scanning it with a real banking app (right account and amount), and the 5-minute expiry and renew flow on real phones (section 4a).
+- **Excel reports:** how Excel shows them compared with your sample files (section 4b).

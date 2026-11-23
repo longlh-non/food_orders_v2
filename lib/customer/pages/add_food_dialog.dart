@@ -9,29 +9,38 @@ import '../../shared/money.dart';
 class AddFoodChoice {
   const AddFoodChoice({this.toppings = const [], this.drink});
 
+  /// The ticked toppings, in menu order; empty for none.
   final List<Topping> toppings;
+
+  /// The drink to add as its own cart line, or null for no drink.
   final MenuItem? drink;
 }
 
 /// Whether adding [dish] asks anything at all: true when it can take
-/// [toppings] or there are [drinks] to offer. When false, add it directly.
+/// [toppings] or there is at least one *available* drink to offer (a list of
+/// only sold-out drinks offers nothing). When false, add it directly.
 bool addFoodAsks(
   MenuItem dish,
   List<Topping> toppings,
   List<MenuItem> drinks,
-) => _offersToppings(dish, toppings) || drinks.isNotEmpty;
+) => _offersToppings(dish, toppings) || _offersDrinks(drinks);
 
+/// Whether any of [drinks] can be picked, i.e. is not sold out.
+bool _offersDrinks(List<MenuItem> drinks) => drinks.any((d) => d.available);
+
+/// Whether [dish] can take toppings and there are any toppings to pick from.
 bool _offersToppings(MenuItem dish, List<Topping> toppings) =>
     dish.allowToppings && toppings.isNotEmpty;
 
-/// Asks "Extra toppings? A drink?" for [dish], then shows a toppings step
-/// and/or a drink step for whatever was ticked (toppings first).
+/// Asks "Thêm {dish name}" with the checkboxes "Thêm topping" and "Thêm đồ
+/// uống" for [dish], then shows a toppings step and/or a drink step for
+/// whatever was ticked (toppings first).
 ///
 /// Returns the choice, or null when the customer cancels or dismisses at any
 /// step: then nothing must be added. The caller changes the cart, once.
 ///
-/// One dialog whose content changes per step, so "Back" keeps every tick and
-/// a dismiss always ends the whole flow.
+/// One dialog whose content changes per step, so "Quay lại" (back) keeps
+/// every tick and a dismiss always ends the whole flow.
 Future<AddFoodChoice?> showAddFoodDialog(
   BuildContext context, {
   required MenuItem dish,
@@ -48,8 +57,11 @@ Future<AddFoodChoice?> showAddFoodDialog(
   );
 }
 
+/// The screens of the add dialog: the tick-boxes, the toppings, the drinks.
 enum _Step { ask, toppings, drink }
 
+/// The dialog shown by [showAddFoodDialog]. Stateful because it remembers the
+/// current step and what has been ticked while the customer moves through it.
 class _AddFoodDialog extends StatefulWidget {
   const _AddFoodDialog({
     required this.dish,
@@ -61,12 +73,17 @@ class _AddFoodDialog extends StatefulWidget {
 
   /// Empty when this dish takes no toppings: the row is then hidden.
   final List<Topping> toppings;
+
+  /// The drinks listed in the drink step. Sold-out ones are shown but cannot
+  /// be picked. The drink row is hidden when none of them is available.
   final List<MenuItem> drinks;
 
   @override
   State<_AddFoodDialog> createState() => _AddFoodDialogState();
 }
 
+/// State for [_AddFoodDialog]: the current step, the two tick-boxes, the
+/// chosen topping ids and the chosen drink id.
 class _AddFoodDialogState extends State<_AddFoodDialog> {
   var _step = _Step.ask;
   var _wantToppings = false;
@@ -86,9 +103,13 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
     _ => null,
   };
 
+  /// The step "Quay lại" goes back to: from the drink step, the toppings step
+  /// if toppings were ticked; otherwise the first step. Ticks are kept.
   _Step _previous(_Step from) =>
       from == _Step.drink && _wantToppings ? _Step.toppings : _Step.ask;
 
+  /// Moves to the next step, or on the last step closes the dialog and
+  /// returns the [AddFoodChoice].
   void _forward() {
     final next = _next(_step);
     if (next != null) {
@@ -105,6 +126,8 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
     );
   }
 
+  /// An `AlertDialog` whose title, content and buttons depend on the current
+  /// step. It redraws through `setState` when the step or a tick changes.
   @override
   Widget build(BuildContext context) {
     final isLast = _next(_step) == null;
@@ -112,9 +135,9 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
     final canGo = _step != _Step.drink || _drinkId != null;
     return AlertDialog(
       title: Text(switch (_step) {
-        _Step.ask => 'Add ${widget.dish.name}',
-        _Step.toppings => 'Extra toppings',
-        _Step.drink => 'A drink',
+        _Step.ask => 'Thêm ${widget.dish.name}',
+        _Step.toppings => 'Thêm topping',
+        _Step.drink => 'Chọn đồ uống',
       }),
       // Scrolls when tall (big text, long lists); the buttons stay visible.
       scrollable: true,
@@ -127,21 +150,23 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
         if (_step == _Step.ask)
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Hủy'),
           )
         else
           TextButton(
             onPressed: () => setState(() => _step = _previous(_step)),
-            child: const Text('Back'),
+            child: const Text('Quay lại'),
           ),
         FilledButton(
           onPressed: canGo ? _forward : null,
-          child: Text(isLast ? 'Add' : 'Next'),
+          child: Text(isLast ? 'Thêm' : 'Tiếp'),
         ),
       ],
     );
   }
 
+  /// First step: tick-boxes for adding toppings and a drink, each shown only
+  /// when there is something to offer.
   Widget _askContent() => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -149,21 +174,23 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Extra toppings'),
+          title: const Text('Thêm topping'),
           value: _wantToppings,
           onChanged: (v) => setState(() => _wantToppings = v ?? false),
         ),
-      if (widget.drinks.isNotEmpty)
+      if (_offersDrinks(widget.drinks))
         CheckboxListTile(
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
-          title: const Text('Add drinks'),
+          title: const Text('Thêm đồ uống'),
           value: _wantDrink,
           onChanged: (v) => setState(() => _wantDrink = v ?? false),
         ),
     ],
   );
 
+  /// Toppings step: one tick-box per topping with its price, and the dish's
+  /// price for one unit with the ticked toppings added.
   Widget _toppingsContent() {
     final unit = _chosenToppings.fold(
       widget.dish.price,
@@ -194,6 +221,9 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
     );
   }
 
+  /// Drink step: radio buttons, so exactly one drink can be picked. A sold-out
+  /// drink stays in the list (same order) but is disabled and marked
+  /// "Hết hàng" instead of showing its price.
   Widget _drinkContent() => RadioGroup<String>(
     groupValue: _drinkId,
     onChanged: (id) => setState(() => _drinkId = id),
@@ -204,8 +234,9 @@ class _AddFoodDialogState extends State<_AddFoodDialog> {
           RadioListTile<String>(
             contentPadding: EdgeInsets.zero,
             value: d.id,
+            enabled: d.available,
             title: Text(d.name),
-            subtitle: Text(formatVnd(d.price)),
+            subtitle: Text(d.available ? formatVnd(d.price) : 'Hết hàng'),
           ),
       ],
     ),

@@ -38,6 +38,9 @@ dependencies:
   http: ^1.2.2
   web: ^1.1.0
   qr_flutter: ^4.1.0
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +58,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  # Runs `flutter gen-l10n` (see l10n.yaml) to turn the ARB files into Dart.
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

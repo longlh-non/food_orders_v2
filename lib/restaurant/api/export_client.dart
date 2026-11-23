@@ -15,6 +15,9 @@ enum ExportFailure {
   /// 429: too many wrong attempts; staff routes are locked for a while.
   tooManyTries,
 
+  /// 503: the shop details for the summary report aren't set on the server.
+  notConfigured,
+
   /// Anything else: a bad month (400), a server error, or no answer.
   other,
 }
@@ -43,6 +46,10 @@ class ExportException implements Exception {
   String toString() => 'ExportException(${failure.name}): $message';
 }
 
+/// Which file to download. [lines] is the CSV with one row per order line;
+/// [summary] and [detail] are the Excel reports.
+enum ExportReport { lines, summary, detail }
+
 final _month = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
 
 /// Downloads one month of orders as CSV bytes from
@@ -60,12 +67,13 @@ class ExportClient {
   /// Closes the underlying HTTP client. Call when done with this client.
   void close() => _client.close();
 
-  /// The CSV file's bytes for [month] (`YYYY-MM`). Throws [ArgumentError]
+  /// The file's bytes (CSV or .xlsx, see [report]) for [month] (`YYYY-MM`). Throws [ArgumentError]
   /// without sending anything when [month] isn't `YYYY-MM` or
   /// [credentials] aren't sendable, and [ExportException] when the server
   /// says no or can't be reached.
   Future<List<int>> fetchMonth(
     String month, {
+    ExportReport report = ExportReport.lines,
     required StaffCredentials credentials,
   }) async {
     if (!_month.hasMatch(month)) {
@@ -77,7 +85,13 @@ class ExportClient {
     final http.Response response;
     try {
       response = await _client.get(
-        Uri(path: '/api/orders/export', queryParameters: {'month': month}),
+        Uri(
+          path: '/api/orders/export',
+          queryParameters: {
+            'month': month,
+            if (report != ExportReport.lines) 'report': report.name,
+          },
+        ),
         headers: credentials.headers,
       );
     } on http.ClientException {
@@ -93,6 +107,7 @@ class ExportClient {
         401 => ExportFailure.wrongCredentials,
         403 => ExportFailure.disabled,
         429 => ExportFailure.tooManyTries,
+        503 => ExportFailure.notConfigured,
         _ => ExportFailure.other,
       },
       'GET /orders/export failed with HTTP $status',

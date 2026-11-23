@@ -144,15 +144,15 @@ void main() {
     await state.load();
 
     await pumpPage(tester, state);
-    expect(find.text("Couldn't load the menu"), findsOneWidget);
+    expect(find.text('Không tải được thực đơn'), findsOneWidget);
     expect(find.textContaining('boom'), findsNothing);
     expect(find.textContaining('502'), findsNothing);
 
     fail = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Thử lại'));
     await tester.pumpAndSettle();
 
-    expect(find.text("Couldn't load the menu"), findsNothing);
+    expect(find.text('Không tải được thực đơn'), findsNothing);
     expect(find.text('Classic Burger'), findsOneWidget);
   });
 
@@ -176,7 +176,7 @@ void main() {
     await tester.pump();
 
     expect(Cart.instance.lines.keys.single.item.id, 'burger');
-    expect(find.text('Added Classic Burger'), findsOneWidget);
+    expect(find.text('Đã thêm Classic Burger'), findsOneWidget);
   });
 
   group('category tabs', () {
@@ -458,9 +458,9 @@ void main() {
       await pumpPage(tester, state);
 
       await openTab(tester, 'Đồ uống');
-      await tester.tap(find.byTooltip('Cart'));
+      await tester.tap(find.byTooltip('Giỏ hàng'));
       await tester.pumpAndSettle();
-      expect(find.text('Your Cart'), findsOneWidget);
+      expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
@@ -488,9 +488,9 @@ void main() {
         MyOrders.instance.track('mine');
         await pumpPage(tester, state);
 
-        expect(find.text('Your orders'), findsOneWidget);
+        expect(find.text('Đơn của bạn'), findsOneWidget);
         await openTab(tester, 'Đồ uống');
-        expect(find.text('Your orders'), findsOneWidget);
+        expect(find.text('Đơn của bạn'), findsOneWidget);
         expect(find.text('Trà đá'), findsOneWidget);
       });
 
@@ -506,9 +506,9 @@ void main() {
         MyOrders.instance.track('mine-done');
         await pumpPage(tester, state);
 
-        expect(find.text('Your orders'), findsNothing);
+        expect(find.text('Đơn của bạn'), findsNothing);
         await openTab(tester, 'Đồ uống');
-        expect(find.text('Your orders'), findsNothing);
+        expect(find.text('Đơn của bạn'), findsNothing);
       });
 
       group('transfer orders', () {
@@ -547,8 +547,8 @@ void main() {
               dueIn: const Duration(minutes: 5),
             ),
           ]);
-          expect(find.text('Your orders'), findsOneWidget);
-          expect(find.text('Awaiting payment'), findsOneWidget);
+          expect(find.text('Đơn của bạn'), findsOneWidget);
+          expect(find.text('Chờ thanh toán'), findsOneWidget);
 
           await tester.tap(find.text('#0001'));
           await tester.pump();
@@ -571,7 +571,7 @@ void main() {
               dueIn: const Duration(minutes: -6),
             ),
           ]);
-          expect(find.text('Your orders'), findsOneWidget);
+          expect(find.text('Đơn của bạn'), findsOneWidget);
           expect(find.text('Hết hạn thanh toán'), findsOneWidget);
 
           await tester.tap(find.text('#0002'));
@@ -603,7 +603,7 @@ void main() {
               dueIn: const Duration(minutes: -30),
             ),
           ]);
-          expect(find.text('Your orders'), findsNothing);
+          expect(find.text('Đơn của bạn'), findsNothing);
         });
       });
     });
@@ -742,8 +742,8 @@ void main() {
       expect(cart.values.single, 1);
       expect(
         find.text(
-          'The price of 1 item in your cart changed. '
-          '1 item is no longer on the menu and was removed.',
+          'Giá của 1 món trong giỏ hàng đã thay đổi. '
+          '1 món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng.',
         ),
         findsOneWidget,
       );
@@ -881,9 +881,9 @@ void main() {
 
       expect(find.text('Xôi thịt'), findsOneWidget);
       expect(find.text('25.000 VNĐ'), findsOneWidget);
-      expect(find.byTooltip('Add Xôi thịt'), findsOneWidget);
+      expect(find.byTooltip('Thêm Xôi thịt'), findsOneWidget);
       expect(find.text('Thịt kho, hành phi'), findsNothing);
-      expect(find.widgetWithText(FilledButton, 'Add'), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Thêm'), findsNothing);
     });
 
     testWidgets('the "+" tap target is at least 48 x 48', (tester) async {
@@ -903,11 +903,11 @@ void main() {
       await state.load();
       await pumpPage(tester, state);
 
-      await tester.tap(find.byTooltip('Add Xôi thịt'));
+      await tester.tap(find.byTooltip('Thêm Xôi thịt'));
       await tester.pump();
 
       expect(Cart.instance.lines.keys.single.item.id, 'a');
-      expect(find.text('Added Xôi thịt'), findsOneWidget);
+      expect(find.text('Đã thêm Xôi thịt'), findsOneWidget);
     });
 
     testWidgets('AddItemButton with onPressed null is disabled', (
@@ -919,26 +919,26 @@ void main() {
           home: Scaffold(
             body: Row(
               children: [
-                const AddItemButton(tooltip: 'Add sold out', onPressed: null),
-                AddItemButton(tooltip: 'Add ok', onPressed: () => taps++),
+                const AddItemButton(tooltip: 'Thêm hết hàng', onPressed: null),
+                AddItemButton(tooltip: 'Thêm được', onPressed: () => taps++),
               ],
             ),
           ),
         ),
       );
 
-      await tester.tap(find.byTooltip('Add sold out'), warnIfMissed: false);
-      await tester.tap(find.byTooltip('Add ok'));
+      await tester.tap(find.byTooltip('Thêm hết hàng'), warnIfMissed: false);
+      await tester.tap(find.byTooltip('Thêm được'));
       await tester.pump();
 
       expect(taps, 1);
       final disabled = tester.widget<IconButton>(
         find.byWidgetPredicate(
-          (w) => w is IconButton && w.tooltip == 'Add sold out',
+          (w) => w is IconButton && w.tooltip == 'Thêm hết hàng',
         ),
       );
       expect(disabled.onPressed, isNull);
-      expect(find.byTooltip('Add sold out'), findsOneWidget);
+      expect(find.byTooltip('Thêm hết hàng'), findsOneWidget);
     });
   });
 
@@ -967,7 +967,7 @@ void main() {
       await state.load();
       await pumpPage(tester, state);
 
-      expect(find.byTooltip('Cart'), findsOneWidget);
+      expect(find.byTooltip('Giỏ hàng'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(AppBar),
@@ -993,12 +993,12 @@ void main() {
       await pumpPage(tester, state);
       expect(badgeText(), findsNothing);
 
-      await tester.tap(find.byTooltip('Add Món 0'));
+      await tester.tap(find.byTooltip('Thêm Món 0'));
       await tester.pump();
       expect(tester.widget<Text>(badgeText()).data, '1');
 
-      await tester.tap(find.byTooltip('Add Món 0'));
-      await tester.tap(find.byTooltip('Add Món 1'));
+      await tester.tap(find.byTooltip('Thêm Món 0'));
+      await tester.tap(find.byTooltip('Thêm Món 1'));
       await tester.pump();
       expect(tester.widget<Text>(badgeText()).data, '3');
     });
@@ -1024,9 +1024,9 @@ void main() {
       await tester.tap(find.widgetWithText(Tab, 'Đồ uống'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Cart'));
+      await tester.tap(find.byTooltip('Giỏ hàng'));
       await tester.pumpAndSettle();
-      expect(find.text('Your Cart'), findsOneWidget);
+      expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
       expect(find.byType(BottomAppBar), findsNothing, reason: 'menu only');
 
       await tester.pageBack();
@@ -1042,7 +1042,7 @@ void main() {
         await pumpPage(tester, state, width: 360, textScale: scale);
         expect(tester.takeException(), isNull);
 
-        final last = find.byTooltip('Add Món 8');
+        final last = find.byTooltip('Thêm Món 8');
         await tester.scrollUntilVisible(
           last,
           300,
@@ -1087,12 +1087,12 @@ void main() {
       await state.load();
       await pumpPage(tester, state, width: 360);
 
-      await tester.tap(find.byTooltip('Add Món 0'));
+      await tester.tap(find.byTooltip('Thêm Món 0'));
       await tester.pumpAndSettle();
 
       final snack = tester.getRect(find.byType(SnackBar));
       final fab = tester.getRect(find.byType(FloatingActionButton));
-      expect(find.text('Added Món 0'), findsOneWidget);
+      expect(find.text('Đã thêm Món 0'), findsOneWidget);
       expect(snack.overlaps(fab), isFalse);
     });
   });

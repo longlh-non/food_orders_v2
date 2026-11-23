@@ -10,6 +10,7 @@ import '../../shared/money.dart';
 import '../state/staff_credentials.dart';
 import '../widgets/staff_login_dialog.dart';
 import 'export_month_dialog.dart';
+import 'menu_edit_page.dart';
 
 /// The two staff payment actions a card can offer, each a separate backend
 /// route (`restaurant-confirm-bank-transfer`).
@@ -34,6 +35,8 @@ class _WrongCredentials implements Exception {
   const _WrongCredentials();
 }
 
+/// The fixed Vietnamese message staff see for a failed payment action. It is
+/// chosen only by [outcome], so the server's own text is never shown.
 String _payOutcomeText(_PayOutcome outcome) => switch (outcome) {
   _PayOutcome.disabled => 'Chức năng đang tắt trên máy chủ',
   _PayOutcome.tooManyTries => 'Thử lại sau.',
@@ -72,6 +75,9 @@ String transferReference(String orderId) {
 ///   3. Show a live count of orders that need attention (`awaiting_payment`
 ///      plus `preparing`) as an AppBar badge.
 ///
+/// The AppBar also has buttons for the month export and for the menu editing
+/// screen (`MenuEditPage`, a plain `Navigator.push`).
+///
 /// "New" is decided against [_seenIds], the ids already in the repository
 /// when this screen last processed a change. On first mount it is seeded with
 /// whatever is already there, so historical orders don't ring on page load.
@@ -94,6 +100,7 @@ class OrdersPage extends StatefulWidget {
   final DateTime Function() now;
   final void Function() chime;
 
+  /// Creates the state object that holds the bookkeeping for this page.
   @override
   State<OrdersPage> createState() => _OrdersPageState();
 }
@@ -109,12 +116,29 @@ bool _isLapsed(Order o, DateTime now) =>
 /// lapsed by the clock but not yet swept.
 bool _isExpired(Order o, DateTime now) => o.expiredUnpaid || _isLapsed(o, now);
 
+/// State behind [OrdersPage]: remembers which orders it has already seen so
+/// only new work rings, tracks payment actions in flight, and keeps one timer
+/// for the next payment deadline. It listens to [OrderRepository] and calls
+/// `setState` on every change, so the whole list rebuilds.
 class _OrdersPageState extends State<OrdersPage> {
+  /// Ids of every order already in the repository when the last change was
+  /// processed. An id not in here is "new".
   final _seenIds = <String>{};
+
+  /// Known `awaiting_payment` orders (seeded at start) that have not rung yet;
+  /// each rings once if it becomes `preparing` (paid).
   final _awaitingUnrung = <String>{};
+
+  /// Ids with a payment action running, so their payment buttons disable.
   final _busyPaymentIds = <String>{};
+
+  /// Fires at the next payment deadline so the card flips to "expired" on
+  /// time; null when no awaiting order has a future deadline.
   Timer? _expiryTimer;
 
+  /// Seeds [_seenIds] and [_awaitingUnrung] from the orders already loaded (so
+  /// old orders don't ring), subscribes to the repository, and starts the
+  /// expiry timer. [dispose] undoes the listener and the timer.
   @override
   void initState() {
     super.initState();
@@ -130,6 +154,8 @@ class _OrdersPageState extends State<OrdersPage> {
     _scheduleExpiry();
   }
 
+  /// Removes the repository listener and cancels the expiry timer, so nothing
+  /// calls back into a page that no longer exists.
   @override
   void dispose() {
     OrderRepository.instance.removeListener(_onRepoChanged);
@@ -162,7 +188,9 @@ class _OrdersPageState extends State<OrdersPage> {
 
   /// Compare the latest repository state against what we've seen and ring
   /// (one chime per tick) for new work, with a plain snackbar per order.
-  /// Then update the bookkeeping so nothing rings twice.
+  /// Then update the bookkeeping so nothing rings twice. Only the last
+  /// snackbar stays visible, because each one replaces the one before.
+  /// Runs on every repository notification, then rebuilds the page.
   void _onRepoChanged() {
     if (!mounted) return;
     final repo = OrderRepository.instance;
@@ -194,7 +222,7 @@ class _OrdersPageState extends State<OrdersPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text('New order from ${order.customerName}$waiting'),
+            content: Text('Đơn mới từ ${order.customerName}$waiting'),
             duration: const Duration(seconds: 5),
           ),
         );
@@ -217,7 +245,7 @@ class _OrdersPageState extends State<OrdersPage> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(
-            content: Text("Couldn't update the order. Try again."),
+            content: Text('Không thể cập nhật đơn hàng. Thử lại.'),
           ),
         );
     }
@@ -281,7 +309,7 @@ class _OrdersPageState extends State<OrdersPage> {
         } on _WrongCredentials {
           StaffCredentialsHolder.instance.clear();
           credentials = null;
-          promptError = 'Wrong staff ID or password';
+          promptError = 'Sai mã nhân viên hoặc mật khẩu';
           continue;
         }
         if (outcome == _PayOutcome.ok) {
@@ -307,6 +335,11 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
+  /// Builds the app bar (menu editing button, month export button and a bell
+  /// [Badge] counting `preparing` plus not-yet-lapsed `awaiting_payment`
+  /// orders) and the order list, or an empty-state message. It rebuilds
+  /// through `setState` from [_onRepoChanged], the expiry timer and payment
+  /// actions.
   @override
   Widget build(BuildContext context) {
     final repo = OrderRepository.instance;
@@ -323,10 +356,17 @@ class _OrdersPageState extends State<OrdersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Incoming Orders'),
+        title: const Text('Danh sách đơn hàng'),
         actions: [
           IconButton(
-            tooltip: 'Export month',
+            tooltip: 'Chỉnh sửa thực đơn',
+            icon: const Icon(Icons.restaurant_menu),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const MenuEditPage()),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Xuất đơn hàng theo tháng',
             icon: const Icon(Icons.download),
             onPressed: () => showExportMonthDialog(context),
           ),
@@ -347,7 +387,7 @@ class _OrdersPageState extends State<OrdersPage> {
         ],
       ),
       body: orders.isEmpty
-          ? const Center(child: Text('No orders yet. Waiting for customers…'))
+          ? const Center(child: Text('Chưa có đơn hàng nào. Đang chờ khách…'))
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: orders.length,
@@ -397,6 +437,7 @@ class _OrderCard extends StatelessWidget {
   /// The clock, to treat a lapsed deadline as expired.
   final DateTime now;
 
+  /// All the data and callbacks come from the page; the card keeps no state.
   const _OrderCard({
     required this.order,
     required this.onChangeStatus,
@@ -405,18 +446,24 @@ class _OrderCard extends StatelessWidget {
     required this.now,
   });
 
+  /// The status the main button moves the order to, or null when there is no
+  /// such button (awaiting payment, delivered, cancelled).
   OrderStatus? get _nextStatus => switch (order.status) {
     OrderStatus.preparing => OrderStatus.ready,
     OrderStatus.ready => OrderStatus.delivered,
     _ => null,
   };
 
+  /// Vietnamese text of the main button for the current status.
   String get _actionLabel => switch (order.status) {
-    OrderStatus.preparing => 'Mark ready',
-    OrderStatus.ready => 'Mark delivered',
+    OrderStatus.preparing => 'Đánh dấu sẵn sàng',
+    OrderStatus.ready => 'Đánh dấu đã giao',
     _ => '',
   };
 
+  /// Builds one card: title, status and payment chips, the item lines with
+  /// toppings and prices, the total, the main status button and, for an unpaid
+  /// or expired transfer, the payment buttons. It reads only its fields.
   @override
   Widget build(BuildContext context) {
     final next = _nextStatus;
@@ -429,7 +476,7 @@ class _OrderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Order #${order.id.length > 4 ? order.id.substring(order.id.length - 4) : order.id} — ${order.customerName}',
+              'Đơn #${order.id.length > 4 ? order.id.substring(order.id.length - 4) : order.id} — ${order.customerName}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
@@ -495,13 +542,19 @@ class _OrderCard extends StatelessWidget {
               ),
             ),
             const Divider(),
-            Row(
+            // Wrap, not Row: the Vietnamese action labels ("Đánh dấu sẵn
+            // sàng", "Đánh dấu đã giao") are long enough that at a narrow
+            // width and a large text scale, the button no longer fits next
+            // to the total — it drops to its own line instead of
+            // overflowing.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: Text(
-                    'Total: ${formatVnd(order.total)}',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
+                Text(
+                  'Tổng: ${formatVnd(order.total)}',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 if (next != null && !expired)
                   FilledButton(

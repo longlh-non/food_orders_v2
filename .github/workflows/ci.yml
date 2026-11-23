@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -24,6 +25,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
         with:
+          # Dependabot does not bump this: the owner updates it by hand,
+          # together with their local Flutter (see docs/ci-cd-decisions.md D3).
           flutter-version: "3.47.7"
           channel: stable
           cache: true
@@ -36,3 +39,76 @@ jobs:
 
       - name: Run all gates
         run: make check
+
+  build:
+    # Release builds of both web apps, plus a compile check of the backend.
+    # Runs only after `check` passes. Calls deploy/build.sh instead of
+    # repeating its commands, so CI and the owner build the same way.
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1508160852fb97248640997f7cfb38da241df0ba # v2.9.1
+        with:
+          # Keep in step with the `check` job above (docs/ci-cd-decisions.md D3).
+          flutter-version: "3.47.7"
+          channel: stable
+          cache: true
+
+      - name: Show toolchain
+        run: flutter --version
+
+      - name: Fetch dependencies
+        run: make bootstrap
+
+      - name: Build both web apps
+        run: bash deploy/build.sh
+
+      # Compile check only (card decision D5 is open: CPU architecture of the
+      # host is not chosen yet), so the bundle is NOT uploaded. `dart build
+      # cli`, not `dart compile exe`: the sqlite3 package has a build hook, and
+      # `dart compile exe` refuses packages with build hooks (checked locally,
+      # Dart 3.14). The output is a bundle/ with bin/server and lib/*.so.
+      - name: Compile-check the backend
+        working-directory: backend
+        run: dart build cli -t bin/server.dart -o ../build/backend
+
+      # Artifacts must hold no credentials. Fails on any .env* file or on the
+      # staff variable names appearing anywhere in the web builds.
+      - name: Check the web builds for credentials
+        run: |
+          set -euo pipefail
+          found=0
+          if [ -n "$(find build/customer build/restaurant -name '.env*' -print -quit)" ]; then
+            echo "error: a .env* file is in a web build" >&2
+            found=1
+          fi
+          if grep -rl -e STAFF_PASSWORD -e STAFF_ID build/customer build/restaurant; then
+            echo "error: a staff credential name is in a web build" >&2
+            found=1
+          fi
+          exit "$found"
+
+      - name: Upload customer web build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: customer-web
+          path: build/customer
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload restaurant web build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: restaurant-web
+          path: build/restaurant
+          retention-days: 7
+          if-no-files-found: error

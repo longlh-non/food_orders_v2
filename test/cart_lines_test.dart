@@ -273,9 +273,9 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: CartPage()));
 
       expect(find.text('+ Thêm chả   + Thêm trứng tráng'), findsOneWidget);
-      expect(find.text('43.000 VNĐ each'), findsOneWidget);
-      expect(find.text('4.000 VNĐ each'), findsOneWidget);
-      expect(find.text('Total: 47.000 VNĐ'), findsOneWidget);
+      expect(find.text('43.000 VNĐ / món'), findsOneWidget);
+      expect(find.text('4.000 VNĐ / món'), findsOneWidget);
+      expect(find.text('Tổng cộng: 47.000 VNĐ'), findsOneWidget);
 
       // + on the topping line only touches that line.
       final toppingTile = find.ancestor(
@@ -289,7 +289,7 @@ void main() {
 
       expect(cart.lines[CartLine(xoi, [cha, trung])], 2);
       expect(cart.lines[CartLine(traDa)], 1);
-      expect(find.text('Total: 90.000 VNĐ'), findsOneWidget);
+      expect(find.text('Tổng cộng: 90.000 VNĐ'), findsOneWidget);
 
       // − on the plain line removes it and leaves the topping line alone.
       final plainTile = find.ancestor(
@@ -305,7 +305,7 @@ void main() {
         CartLine(xoi, [cha, trung]),
       ]);
       expect(cart.lines.values.single, 2);
-      expect(find.text('Total: 86.000 VNĐ'), findsOneWidget);
+      expect(find.text('Tổng cộng: 86.000 VNĐ'), findsOneWidget);
     });
   });
 }

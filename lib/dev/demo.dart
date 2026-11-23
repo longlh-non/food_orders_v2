@@ -6,14 +6,22 @@ import '../restaurant/pages/orders_page.dart';
 import '../shared/api/order_repository.dart';
 import '../shared/theme.dart';
 
-/// Dev-only split-view entry point: customer app on the left, restaurant app
-/// on the right, both inside a single Dart process so they share one
-/// [OrderRepository.instance] without any backend.
+/// Dev-only split-view entry point: customer screen on the left, restaurant
+/// screen on the right, both inside a single Dart process so they share one
+/// [OrderRepository.instance].
 ///
-/// Useful for watching the full ordering flow in one browser window without
-/// needing the shelf backend to be up. When the backend IS up and both apps
-/// are running as separate processes, this view becomes redundant — but it
-/// stays as a quick smoke-test tool.
+/// This file may import both `lib/customer/` and `lib/restaurant/` because
+/// `lib/dev/` is the only place allowed to (CLAUDE.md, architecture invariant
+/// 1; `make boundaries` checks it). The two panes share state because that
+/// state lives in singletons (`static final instance`): [OrderRepository]
+/// is the order cache for both panes, so an order placed on the left shows up
+/// on the right with no extra wiring. The customer-only singletons (`Cart`,
+/// `MyOrders`, [MenuState]) are used by the left pane alone.
+///
+/// It still needs the backend: the orders and the menu are fetched from
+/// `/api/*` and live updates come over SSE, so it must be served where that
+/// proxy exists. It is a quick one-window smoke test, not a replacement for
+/// running the two real apps as separate processes.
 ///
 /// Run with: `flutter run -t lib/dev/demo.dart -d chrome --web-port=8082`
 void main() {
@@ -24,9 +32,12 @@ void main() {
   runApp(const DemoApp());
 }
 
+/// Root widget of the demo: a [MaterialApp] (customer theme as the base) whose
+/// home is the two-pane [_SplitView]. It holds no state.
 class DemoApp extends StatelessWidget {
   const DemoApp({super.key});
 
+  /// Builds the app shell. It watches nothing, so it is built once.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -43,6 +54,8 @@ class DemoApp extends StatelessWidget {
 class _SplitView extends StatelessWidget {
   const _SplitView();
 
+  /// Builds two equal-width panes in a [Row] with a thin divider. It watches
+  /// nothing itself; the pages inside rebuild from the shared singletons.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,5 +77,7 @@ class _SplitView extends StatelessWidget {
   }
 }
 
+/// Route factory for the left pane's [Navigator]: every route it is asked for
+/// is the customer [MenuPage] (the cart is pushed from inside that page).
 Route _customerRoute(RouteSettings settings) =>
     MaterialPageRoute(builder: (_) => const MenuPage());

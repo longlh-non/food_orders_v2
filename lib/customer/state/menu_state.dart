@@ -9,6 +9,10 @@ import '../../shared/models/topping.dart';
 /// Use [MenuState.instance] in the app (same style as `Cart` and
 /// `MyOrders`). Tests build their own with `MenuState(OrderApiClient(client:
 /// MockClient(...)))`.
+///
+/// Holds the menu items, the toppings, a loading flag and the last error.
+/// The menu page listens (and the cart is synced from it); [load] notifies
+/// when it starts and again when it finishes, whether it worked or failed.
 class MenuState extends ChangeNotifier {
   MenuState(this._api);
 

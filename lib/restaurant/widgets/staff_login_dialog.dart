@@ -16,7 +16,7 @@ import '../state/staff_credentials.dart';
 /// values and the caller is asking again.
 Future<StaffCredentials?> showStaffLoginDialog(
   BuildContext context, {
-  String title = 'Staff login',
+  String title = 'Đăng nhập nhân viên',
   String? initialError,
 }) => showDialog<StaffCredentials>(
   context: context,
@@ -65,7 +65,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
       // Checked here: a browser would refuse such a header and it would
       // look like a network failure.
       setState(
-        () => _error = 'Use plain letters, digits and symbols, no accents',
+        () => _error = 'Chỉ dùng chữ không dấu, số và ký hiệu thông thường',
       );
       return;
     }
@@ -92,7 +92,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
             // live in memory only, not in every device's password manager.
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Staff ID'),
+            decoration: const InputDecoration(labelText: 'Mã nhân viên'),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -102,7 +102,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
             autocorrect: false,
             autofillHints: const [],
             enableIMEPersonalizedLearning: false,
-            decoration: const InputDecoration(labelText: 'Staff password'),
+            decoration: const InputDecoration(labelText: 'Mật khẩu nhân viên'),
             onSubmitted: (_) {
               if (canConfirm) _confirm();
             },
@@ -122,7 +122,7 @@ class _StaffLoginDialogState extends State<_StaffLoginDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Hủy'),
         ),
         FilledButton(
           onPressed: canConfirm ? _confirm : null,

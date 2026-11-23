@@ -6,6 +6,9 @@ import 'package:sqlite3/sqlite3.dart';
 /// date. Pass `':memory:'` for a throwaway database (tests).
 ///
 /// For a file path, the parent directory is created if it doesn't exist.
+/// Also sets a 2 second busy timeout and runs [migrate]. The caller owns the
+/// returned handle and closes it (`bin/server.dart` on exit, tests at the end);
+/// `OrdersApi` and `MenuApi` only borrow it.
 Database openDatabase(String path) {
   if (path != ':memory:') {
     File(path).parent.createSync(recursive: true);
@@ -25,7 +28,14 @@ Database openDatabase(String path) {
 ///
 /// To change the schema later, add the next `if (db.userVersion < N)` step below —
 /// never edit a step that has already shipped.
+///
+/// Steps so far: 1 `orders` table; 2 `menu_items` with placeholder items;
+/// 3 categories, toppings and the real menu; 4 the `nibble` category;
+/// 5 `image` column; 6 `available` column; 7 payment columns on `orders`;
+/// 8 `pending`/`accepted` orders become `preparing`.
 void migrate(Database db) {
+  // Step 1: the `orders` table (id, customer name, status, placement time, and
+  // the items as one JSON string).
   if (db.userVersion < 1) {
     db.execute('BEGIN');
     try {
@@ -48,6 +58,9 @@ void migrate(Database db) {
     }
   }
 
+  // Step 2: the `menu_items` table (id, name, description, price in VND) with
+  // CHECKs that keep hand edits sane, filled once with 5 placeholder items
+  // ([seedMenuV2]) that step 3 removes again.
   if (db.userVersion < 2) {
     db.execute('BEGIN');
     try {
@@ -225,8 +238,8 @@ void migrate(Database db) {
   }
 
   // Step 6: a "sold out" switch per menu item. 1 = can be ordered, 0 = sold
-  // out. Existing rows stay available. Nothing in the app changes it yet;
-  // the staff write endpoint will (until then, only the sqlite3 CLI).
+  // out. Existing rows stay available. It is changed with the staff-only
+  // `PATCH /menu/{id}` or the sqlite3 CLI.
   if (db.userVersion < 6) {
     db.execute('BEGIN');
     try {
@@ -530,7 +543,8 @@ const seedMenu = <Map<String, Object>>[
 ];
 
 /// The toppings any food with `allow_toppings = 1` can take, written by
-/// step 3. Prices are VND.
+/// step 3. Prices are VND. Like [seedMenu], this only fills a brand-new
+/// database.
 const seedToppings = <Map<String, Object>>[
   {'id': 'cha', 'name': 'Thêm chả', 'price': 10000.0},
   {'id': 'thit', 'name': 'Thêm thịt', 'price': 10000.0},

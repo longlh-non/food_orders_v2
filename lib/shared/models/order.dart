@@ -22,16 +22,22 @@ class OrderTopping {
   /// carried ids; new orders from the app always set it.
   final String? id;
   final String name;
+
+  /// VND, whole number (never cents).
   final double price;
 
   const OrderTopping({this.id, required this.name, required this.price});
 
+  /// Shape sent as one entry of an [OrderItem]'s `toppings` list at POST
+  /// /orders. Omits `id` when null, matching [fromJson].
   Map<String, dynamic> toJson() => {
     if (id != null) 'id': id,
     'name': name,
     'price': price,
   };
 
+  /// Parses one topping from an order's `toppings` list (GET /orders, SSE
+  /// events). `id` is optional for orders stored before toppings carried one.
   factory OrderTopping.fromJson(Object? json) {
     if (json is! Map<String, dynamic>) {
       throw const FormatException('order topping must be a JSON object');
@@ -66,6 +72,9 @@ class OrderItem {
   final String? menuItemId;
   final String name;
   final int quantity;
+
+  /// VND, whole number (never cents). Base price of the dish, without
+  /// toppings — see the class doc above.
   final double price;
   final List<OrderTopping> toppings;
 
@@ -188,6 +197,8 @@ class Order {
     paymentDueAt: paymentDueAt ?? this.paymentDueAt,
   );
 
+  /// Shape sent to the backend at POST /orders. [paymentDueAt] is left out
+  /// on purpose: the server sets it and rejects any order that sends it.
   Map<String, dynamic> toJson() => {
     'id': id,
     'customerName': customerName,
@@ -199,6 +210,8 @@ class Order {
     // 400 at POST /orders).
   };
 
+  /// Inverse of [toJson], plus the server-only fields: parses one order from
+  /// GET /orders, a PATCH reply, or an SSE event.
   factory Order.fromJson(Map<String, dynamic> json) => Order(
     id: json['id'] as String,
     customerName: displayText(json['customerName'] as String),
@@ -237,11 +250,11 @@ DateTime? _readPaymentDueAt(Map<String, dynamic> json) {
 /// the enum so UI copy can change without touching the data layer.
 extension OrderStatusLabel on OrderStatus {
   String get label => switch (this) {
-    OrderStatus.awaiting_payment => 'Awaiting payment',
-    OrderStatus.preparing => 'Preparing',
-    OrderStatus.ready => 'Ready for pickup',
-    OrderStatus.delivered => 'Delivered',
-    OrderStatus.cancelled => 'Cancelled',
+    OrderStatus.awaiting_payment => 'Chờ thanh toán',
+    OrderStatus.preparing => 'Đang chuẩn bị',
+    OrderStatus.ready => 'Sẵn sàng lấy hàng',
+    OrderStatus.delivered => 'Đã giao',
+    OrderStatus.cancelled => 'Đã hủy',
   };
 }
 

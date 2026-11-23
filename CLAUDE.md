@@ -5,22 +5,41 @@ Owner is new to Flutter; keep explanations grounded and avoid over-engineering.
 
 ## Layout
 
+(Main files only; the tree is not a complete listing.)
+
 ```
 lib/
 ├── shared/          # imported by BOTH apps — never import across customer/restaurant
-│   ├── models/      # Order, OrderItem, OrderStatus, MenuItem
-│   ├── api/         # OrderApiClient (HTTP + SSE) and OrderRepository (ChangeNotifier singleton cache)
+│   ├── models/      # Order (status + paymentMethod + paymentDueAt), OrderItem, OrderStatus, PaymentMethod, MenuItem, Topping
+│   ├── api/         # OrderApiClient (HTTP + SSE, incl. the payment routes) and OrderRepository (ChangeNotifier singleton cache)
 │   ├── money.dart   # formatVnd(): every price on screen (25.000 VNĐ)
 │   └── theme.dart   # customerTheme(), restaurantTheme()
 ├── customer/
 │   ├── main.dart    # CustomerApp entry point
+│   ├── api/         # payment_client.dart: GET /payment-info and GET /orders/{id}/payment-qr
 │   ├── state/       # Cart, MenuState, MyOrders (ChangeNotifier singletons)
-│   └── pages/       # MenuPage (grid), CartPage
+│   └── pages/       # MenuPage (grid), CartPage (pick cash or bank transfer), PaymentQrPage (payment_qr_page.dart: QR, countdown, switch to cash / new QR)
 ├── restaurant/
 │   ├── main.dart    # RestaurantApp entry point
-│   └── pages/       # OrdersPage
+│   ├── api/         # export_client.dart (the month export, 3 report choices), menu_admin_client.dart
+│   └── pages/       # OrdersPage (payment buttons), export_month_dialog.dart
 └── dev/
     └── demo.dart    # dev-only split view (customer left, restaurant right, shared state)
+
+backend/
+├── bin/
+│   ├── server.dart            # the server: startup, settings, listens on :3000
+│   └── seed_mock_orders.dart  # dev-only: adds fake delivered/cancelled orders for testing the reports
+└── lib/
+    ├── orders_api.dart        # /orders routes, payment routes, /payment-info, month export, SSE
+    ├── menu_api.dart, images_api.dart, staff_gate.dart, database.dart ...
+    ├── shop_settings.dart     # SHOP_* and BANK_* settings
+    ├── vietqr.dart            # QR text and transfer reference (DH + 6 digits)
+    ├── orders_export.dart     # the CSV export
+    ├── orders_report.dart     # what the two Excel reports count (delivered orders per day, cash vs transfer)
+    ├── report_summary.dart    # the summary .xlsx (sheets gộp and tách)
+    ├── report_detail.dart     # the detail .xlsx (one sheet)
+    └── xlsx_writer.dart       # a small .xlsx writer used by both reports
 ```
 
 Two `main.dart` files are intentional — each is a separate entry point producing a separate web build. They run as independent processes and (in prod) will be deployed to different domains.
@@ -44,7 +63,8 @@ VS Code: `.vscode/launch.json` has configs for all three. Press F5, pick one.
 
 Tests: `flutter test`. Analyze: `flutter analyze`.
 
-Owner's step-by-step tasks (start, restart, back up, restore, staff ID and password, checks): see `docs/runbook-local.md`.
+Owner's step-by-step tasks (start, restart, back up, restore, staff ID and password, shop and bank settings, checks): see `docs/runbook-local.md`.
+Putting it on the public internet (free VM, Caddy, backups, release steps): see `docs/deploy.md`.
 
 ## Local domains (customer.local / restaurant.local)
 
@@ -169,7 +189,7 @@ API:
 | GET | `/payment-info` | public: whether bank transfer is set up, and the account to show next to the QR | 200 `{"transferEnabled": bool}`; when enabled also `bankName`, `accountNumber`, `accountName` (from the `BANK_*` settings). `Cache-Control: no-store` |
 | GET | `/orders/{id}/payment-qr` | public (no body): the QR text for an order that is `bank_transfer`, `awaiting_payment` and **not past its deadline** (a renewed order counts). The amount is computed on the server from the stored items; nothing in the request is used. | 200 `{"payload": string, "amount": int, "reference": string, "dueAt": string, "bankName": string, "accountNumber": string, "accountName": string}` with `Cache-Control: no-store` · 404 unknown id · 409 not payable (cash, paid, switched to cash, cancelled / expired, past its deadline, or a stored total that isn't whole VND above 0) · 500 a stored order is malformed (fixed message) · 503 bank transfer not set up |
 | GET | `/orders/stream` | SSE — each event is one Order JSON | 200 `text/event-stream`; first line `: connected`, ping every 30s |
-| GET | `/orders/export?month=YYYY-MM` | **staff only** (headers `X-Staff-Id` + `X-Staff-Password`, see "Staff ID and password"): one month of orders as a CSV file for Excel. Read-only. | 200 `text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="orders-YYYY-MM.csv"`, `Cache-Control: no-store` (an empty month is a header-only file) · 400 `month` missing or not `YYYY-MM` · 401 missing or wrong staff ID or password · 403 staff routes disabled · 429 too many wrong attempts (`Retry-After`) · 500 a stored order is malformed (fixed message; only its id is logged) |
+| GET | `/orders/export?month=YYYY-MM[&report=summary\|detail]` | **staff only** (headers `X-Staff-Id` + `X-Staff-Password`, see "Staff ID and password"): one month of orders as a file for Excel. Read-only. With no `report`: the CSV, one row per order line, all statuses. `report=summary` or `report=detail`: an `.xlsx` report built from the month's **delivered** orders only (no customer names or order ids). Checks run in this order: staff gate, `month`, `report`, report settings (summary only), then the read. | 200 CSV: `text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="orders-YYYY-MM.csv"`, `Cache-Control: no-store` (an empty month is a header-only file) · 200 `report=summary`: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `filename="bao-cao-tong-hop-YYYY-MM.xlsx"`, `Cache-Control: no-store`, sheets `gộp` and `tách` · 200 `report=detail`: same type and `no-store`, `filename="chi-tiet-YYYY-MM.xlsx"`, one sheet · 400 `month` missing or not `YYYY-MM`, or `report` is anything other than `summary` / `detail` (also empty, repeated, or `format=xlsx` style values) · 401 missing or wrong staff ID or password · 403 staff routes disabled · 429 too many wrong attempts (`Retry-After`) · 503 `report=summary` while the `SHOP_*` report settings aren't all set (fixed message; the CSV and `detail` don't need them) · 500 a stored order is malformed (fixed message; only its id is logged) |
 | GET | `/menu` | the menu, in insertion order. Public; the only write is the staff `PATCH` below (no POST or DELETE). | 200 JSON list of `{id: string, name: string, description: string, price: number, category: "food" \| "snack" \| "drink" \| "nibble", allowToppings: bool, image: string \| null, available: bool}` (`allowToppings` is only ever true for foods; `available` is false when the item is sold out; `image` is a picture **file name** such as `xoi-thit.webp` matching `^[a-z0-9][a-z0-9-]{0,63}\.(jpg\|jpeg\|png\|webp)$`, not a URL, or `null` for no picture) |
 | GET | `/toppings` | the toppings any food with `allowToppings` can take, in insertion order. Read-only. | 200 JSON list of `{id: string, name: string, price: number}` |
 | PATCH | `/menu/{id}` | **staff only** (headers `X-Staff-Id` + `X-Staff-Password`, see "Staff ID and password"): change an item's price and/or sold-out switch. Body `{"price"?: number, "available"?: bool}` with at least one field and nothing else; `price` a whole number from 0 to 1,000,000, `available` strictly `true`/`false`. Only the named fields change (last write wins). | 200 the updated item (same shape as `GET /menu` items) · 400 invalid body · 401 missing or wrong staff ID or password · 403 staff routes disabled (no usable `STAFF_ID`/`STAFF_PASSWORD`) · 429 too many wrong attempts (`Retry-After`) · 404 unknown id · 413 body over 4 KB |
@@ -194,7 +214,7 @@ Order rules (enforced by the backend):
     - `bank_transfer` also needs an order total above 0 (400), and the bank details set up (`BANK_*`, see `ShopSettings`), otherwise 503 "Bank transfer is not set up".
     - The server sets `paymentDueAt` itself: its own clock plus 5 minutes, as an ISO-8601 UTC string, for a new `bank_transfer` order; `null` for cash.
   - **Replies:** `POST`, `PATCH`, `GET /orders` and the stream all carry `paymentMethod` (always present) and `paymentDueAt` (string or `null`). Orders stored before payment methods read back as `cash` / `null`.
-  - Until the shared-model card lands, the current customer app still posts `pending` and the restaurant app still PATCHes `accepted`, so both get 400 against this backend (the customer sees "couldn't place your order"). Deploy the backend and the apps together; a browser tab opened before the deploy needs a reload.
+  - **Deploy order:** the apps now post `preparing` or `awaiting_payment` and skip any status they don't know. Restart the backend (after a dated backup, see "Storage") so schema step 8 runs **before** the apps are reloaded; against an un-migrated database, old `pending` orders would be invisible. A browser tab opened before the change still posts `pending` and gets 400 ("couldn't place your order") until it is reloaded.
   - `placedAt`: an ISO-8601 date-time string starting `YYYY-MM-DDT` (what `DateTime.toIso8601String()` produces).
 - PATCH changes **only** `status`. Other fields in the body are ignored. Any known status is accepted, and the order of steps is not enforced, with these exceptions so a status button can't skip the payment step:
   - An `awaiting_payment` order can only be PATCHed to `cancelled`; any other target is 409 "Use the payment routes".
@@ -221,11 +241,14 @@ Size limits (so one device on the wifi can't fill the backend's memory or disk):
 
 Code:
 - `backend/lib/orders_api.dart`: the `/orders` routes. `backend/lib/menu_api.dart`: the `/menu` and `/toppings` routes, and the staff `PATCH /menu/{id}` behind the gate in `backend/lib/staff_gate.dart`. Both take the same database in their constructors and don't close it.
-- `backend/lib/vietqr.dart`: the QR payload and the transfer reference (pure functions). `backend/lib/shop_settings.dart`: the `SHOP_*` and `BANK_*` values. The two payment routes above live in `orders_api.dart`.
+- `backend/lib/vietqr.dart`: the QR payload and the transfer reference (pure functions). `backend/lib/shop_settings.dart`: the `SHOP_*` and `BANK_*` values. The payment routes (switch, renew, staff switch, confirm, QR, bank info) all live in `orders_api.dart`, together with the 15-second expiry sweep.
+  - **Two copies of `transferReference`:** the restaurant screen (`lib/restaurant/pages/orders_page.dart`) shows the transfer content staff look for, using its own copy of `transferReference` from `backend/lib/vietqr.dart` (the apps can't import the backend). Keep them in sync by hand: both test files pin `transferReference('abc')` to `DH920331` (`backend/test/vietqr_test.dart`, `test/orders_page_test.dart`), so a change on one side fails a test. The customer app doesn't compute it; it shows the `reference` the server sends.
+- `backend/lib/orders_export.dart`: the CSV. `backend/lib/orders_report.dart`: the numbers behind the two Excel reports (delivered orders of a month, grouped by day, cash versus transfer). `backend/lib/report_summary.dart` and `backend/lib/report_detail.dart` draw the two reports with `backend/lib/xlsx_writer.dart`, a small `.xlsx` writer that uses the `archive` package for the zip. All are pure functions with no database; the `/orders/export` route in `orders_api.dart` reads the month and calls them.
+- `backend/bin/seed_mock_orders.dart` (with `mock_orders.dart` and `mock_orders_db.dart`): a dev-only tool that adds fake `delivered` and `cancelled` orders (ids starting `mock-`) so the reports have something to show. See `docs/runbook-local.md`.
 - `backend/lib/images_api.dart`: `GET /images/{file}`, from one folder. Names are checked with the shared rule in `backend/lib/menu_image.dart`, so no request can reach a file outside the folder.
 - `backend/lib/database.dart`: opens the file and creates or upgrades tables. Schema steps are numbered with SQLite's `PRAGMA user_version`; to change the schema, add a new step and never edit a shipped one.
 - `backend/bin/server.dart`: opens the database once, combines both APIs, adds request logging, and listens.
-- Tests: `backend/test/orders_api_test.dart` (`make backend-test`). They use an in-memory database per test, plus temp files for the persistence tests.
+- Tests: `backend/test/*_test.dart` (`make backend-test`), e.g. `orders_api_test.dart`, `orders_payment_*_test.dart`, `vietqr_test.dart`, `report_*_test.dart`. They use an in-memory database per test, plus temp files for the persistence tests.
 
 Storage:
 - The database is `backend/data/orders.db` by default, found relative to `bin/server.dart`, so it doesn't matter which directory you run from. Set `ORDERS_DB=/path/to/file.db` to use another file.
@@ -240,7 +263,8 @@ Storage:
   - Step 5 adds the `image` column to `menu_items`. Every existing item gets NULL (no picture); nothing else changes.
   - Step 6 adds the `available` column to `menu_items`. Every existing item stays available (1); nothing else changes.
   - Step 7 adds the `payment_method` and `payment_due_at` columns to `orders`. Every existing order gets NULL in both (read back as `cash` / `null`); nothing else changes.
-  - Step 8 turns every stored `pending` or `accepted` order into `preparing`. **It cannot be undone**, so make the dated backup first. An old `pending` order nobody touched then shows in the kitchen as "preparing"; move it to delivered or cancelled by hand.
+  - Step 8 turns every stored `pending` or `accepted` order into `preparing`. **It cannot be undone**, so make the dated backup first. An old `pending` order nobody touched then shows in the kitchen as "preparing"; move it to delivered or cancelled by hand. Restart the backend (so step 8 runs) before you reload the apps: they skip statuses they don't know.
+  - There is no step 9: renewing a payment needs no new column (it only rewrites `status` and `payment_due_at`).
   - A failed step rolls back completely, but a backup is cheap.
 - **How the menu got there:** schema step 2 created `menu_items` with 5 placeholder items. Step 3 added categories and toppings, removed those placeholders (`burger`, `pizza`, `salad`, `fries`, `soda`), and inserted the owner's real menu: 9 foods, 7 snacks ("Ăn nhẹ"), 9 drinks and 5 toppings, priced in **VND**. Step 4 added the `nibble` category (Ăn vặt), **empty on purpose**: the table was rebuilt to allow the new value, keeping every row and its order. The Ăn vặt tab shows an empty message until you add an item. Each step runs once, so restarts never re-fill anything and your edits stay.
 - `GET /menu` and `GET /toppings` read the tables on every request, so a change shows up on the next menu load, with no backend restart.
@@ -280,7 +304,7 @@ sqlite3 backend/data/orders.db "UPDATE menu_items SET available = 1 WHERE id = '
 
 - **Picture names:** lowercase letters, digits and `-` only, ending in `.jpg`, `.jpeg`, `.png` or `.webp`. An iPhone photo called `IMG_1234.JPG` must be renamed first, e.g. to `xoi-thit.jpg`. The table refuses names with `/`, spaces, capitals or `%`. A name that breaks the rule in another way (e.g. `.gif`) is returned as `null`, so no picture shows.
 - **Adding a picture:** copy the file into the images folder, then set the name.
-  - The folder is `backend/data/images/` by default (git-ignored, created when the backend starts). `IMAGES_DIR=/path` overrides it; a compiled binary must set it.
+  - The folder is `backend/data/images/` by default (git-ignored, created when the backend starts). `IMAGES_DIR=/path` overrides it; a built binary must set it (like `ORDERS_DB`). The backend is built with `dart build cli`, not `dart compile exe`, which refuses the `sqlite3` build hook: see `docs/deploy.md`.
   - Example: `cp ~/Pictures/xoi-thit.webp backend/data/images/`, then run the `sqlite3` UPDATE above.
   - Check it at `http://customer.local/api/images/xoi-thit.webp`.
   - The name alone shows nothing until the file is in the folder.
@@ -300,28 +324,107 @@ sqlite3 backend/data/orders.db "UPDATE menu_items SET available = 1 WHERE id = '
 - **Starting items:** the seed lists in `database.dart` (`seedMenu`, `seedToppings`) only affect a brand-new database. To change your real menu, use the commands above.
 - The `sqlite3` Dart package needs no system library. On the first build it downloads a precompiled SQLite from the package's GitHub release (`sqlite3-3.9.1`) and checks it against a SHA-256 hash shipped inside the package. So the first `dart test` or `dart run` needs network access.
 
+### Payment by bank transfer
+
+Each order is paid in cash or by bank transfer. The customer picks the method in the cart (`Tiền mặt` or `Chuyển khoản`). If the bank details aren't set up (see "Shop and bank settings"), the cart shows transfer as off ("Chuyển khoản chưa được bật") and only cash can be chosen.
+
+- **Cash:** the order is `preparing` at once, like before. The customer sees a thank-you and the kitchen sees the order.
+- **Transfer:** the order starts as `awaiting_payment` and the customer lands on the payment page (`lib/customer/pages/payment_qr_page.dart`). It shows:
+  - a QR code with the exact amount;
+  - the bank name, the account number and the account name as text;
+  - the amount and the transfer content, `DH` + the last 6 digits of the order id (for example `DH482913`);
+  - a 5-minute countdown ("Còn lại mm:ss").
+  The customer scans it in a banking app. The page also has a button to switch to cash instead.
+- **Staff confirm:** staff see the order in the restaurant app marked "Chưa thanh toán", with the transfer content to look for in the bank app, and the buttons **"Đã nhận chuyển khoản"** and **"Chuyển sang tiền mặt"**. Tapping "Đã nhận chuyển khoản" calls `confirm-payment`: the order becomes `preparing`, but stays a transfer order. The app asks for the staff ID and password when it needs them and keeps them only until the page is reloaded. Nothing tells the app that money arrived: staff look at the bank app.
+- **No payment in 5 minutes:** the server cancels the order by its **own** clock (a sweep every 15 seconds, plus a check whenever a payment route is called), so a customer can see `awaiting_payment` for up to 15 seconds after the deadline. The `paymentDueAt` stays on the cancelled order; that is how an expiry is told from a staff cancel (a staff cancel clears it).
+- **After the 5 minutes, the customer's choice** (customer routes, no login):
+  - The customer page asks whether to switch to cash. **Yes** (`switch-to-cash`): cash and `preparing`. **No, make a new code** (`renew-payment`): the same order and amount get a fresh 5-minute deadline and `awaiting_payment` again, and the QR route serves it again with the same amount and transfer content.
+  - Both work **only within 15 minutes after the expiry** (server clock). There is no limit on how many times, and each renewal restarts the 15 minutes from its own new expiry. After that the server answers 409 and the page says to order again or tell the shop.
+  - Only an order cancelled **by the expiry** is offered this. An order staff cancelled on purpose is not.
+  - Anyone on the wifi who knows an order id can call these two routes (the accepted risk under "Payment expiry and the payment routes").
+- **Staff switch to cash:** staff can switch an `awaiting_payment` order, **and an order cancelled by the expiry, at any time** (no 15-minute limit, `staff-switch-to-cash`). The result is the same: cash and `preparing`. A staff-cancelled order can't be brought back this way. The expired card in the restaurant app shows "Hết hạn thanh toán" and only the cash button.
+- **"Cancelling the QR"** means the app hides it and the server stops serving it (`payment-qr` answers 409). A QR already scanned can't be revoked at the bank.
+- **The late-transfer case:** staff **cannot** confirm a cancelled order as a bank transfer (`confirm-payment` answers 409). If money arrives late, twice, or for a cancelled order, check it in the bank app and refund or sort it out **by hand, outside the app**; the app never moves money. A paid transfer order that staff cancel by mistake can't be moved back either (also by hand). The restaurant screen has no cancel button today; a cancel is a direct `PATCH`.
+- **Clocks:** the countdown on the phone uses the phone's clock for display only. The server's clock decides when an order expires, so a phone with a wrong time shows a wrong countdown but never extends the deadline.
+- **Old orders** (stored before payment methods) read back as cash (`paymentDueAt` `null`). Orders stored as `pending` or `accepted` became `preparing` in schema step 8 (see "Storage").
+- The transfer content is the same for an order's whole life, also after a renewal. It is the same 6 digits staff see on the card.
+
+### Shop and bank settings
+
+Nine settings are read from the environment **when the backend starts** (like the staff ID). A change needs a restart. They are your own details, so **they are never committed** and never go in a file inside the project.
+
+| Variable | Used for | Rule |
+|---|---|---|
+| `SHOP_NAME` | the **whole first line** of both sheets of the summary report (nothing is added in front of it) | up to 200 characters |
+| `SHOP_TAX_CODE` | the "Mã số thuế" line of the summary report | 1-20 characters, digits and `-` only |
+| `SHOP_ADDRESS` | the "Địa chỉ" line | up to 200 characters |
+| `SHOP_LOCATION` | the "Địa điểm kinh doanh" line | up to 200 characters |
+| `SHOP_REPRESENTATIVE` | the name under the signature line | up to 100 characters |
+| `BANK_BIN` | the bank id inside the QR | exactly 6 digits |
+| `BANK_ACCOUNT` | the account number in the QR and on the payment page | 1-19 digits |
+| `BANK_ACCOUNT_NAME` | the account holder shown on the payment page | up to 100 characters |
+| `BANK_NAME` | the bank name shown on the payment page | up to 100 characters |
+
+- **Rules for all nine:** spaces around a value are ignored, an empty value counts as unset, and a newline, tab or other control character **inside** the value makes it invalid (one at the very start or end is trimmed away). Text lengths count UTF-16 units (a Vietnamese letter is 1), so accents are fine here, unlike the staff ID and password.
+- **What switches on:** all five `SHOP_*` valid = the summary report works (`reportEnabled`); otherwise `report=summary` answers 503. All four `BANK_*` valid = bank transfer works (`transferEnabled`); otherwise `bank_transfer` orders, the QR and a renewal answer 503 and the cart offers cash only. A missing or invalid value switches off only its own feature and never stops the backend. The CSV and the detail report need none of them.
+- **Startup lines:** the backend prints `shop details for reports: enabled` or `disabled (missing or invalid: ...)`, and the same for `bank transfer`. Only the variable **names** are printed, never a value, not even its length.
+- **The account number isn't secret** (the QR and `GET /payment-info` show it to every customer), but keep these values out of the repo, your shell history and any file in the project.
+- **Start command** (the values below are fake placeholders; type your own at the prompts, so they stay out of your shell history):
+
+```bash
+cd backend
+read -r STAFF_ID && read -rs STAFF_PASSWORD && export STAFF_ID STAFF_PASSWORD
+for v in SHOP_NAME SHOP_TAX_CODE SHOP_ADDRESS SHOP_LOCATION SHOP_REPRESENTATIVE \
+         BANK_BIN BANK_ACCOUNT BANK_ACCOUNT_NAME BANK_NAME; do
+  read -r -p "$v: " "$v" && export "$v"
+done
+dart run bin/server.dart
+# Example answers (fake): SHOP_NAME = Example Shop, SHOP_TAX_CODE = 0000000000,
+# SHOP_ADDRESS = 1 Example Street, SHOP_LOCATION = 1 Example Street,
+# SHOP_REPRESENTATIVE = Example Person, BANK_BIN = 000000,
+# BANK_ACCOUNT = 000000000, BANK_ACCOUNT_NAME = EXAMPLE PERSON, BANK_NAME = Example Bank
+```
+
+- Step by step for your own machine: `docs/runbook-local.md` ("Shop and bank settings"). On a hosted server the values go in the service's environment file: see `docs/deploy.md`.
+- Whether a banking app really opens the transfer with the right amount from the QR is owner acceptance; agents can't scan it.
+
 ### Exporting a month
 
-Staff download one month of orders as a spreadsheet file:
+Staff download one month of orders as a file for Excel. `GET /orders/export?month=YYYY-MM` gives one of **three** outputs, chosen by `report`:
+
+| `report` | File | What it is |
+|---|---|---|
+| none (the default) | `orders-YYYY-MM.csv` | the CSV, one row per order line, all statuses, with customer names. Unchanged by the reports. |
+| `summary` | `bao-cao-tong-hop-YYYY-MM.xlsx` | the summary report for the books, sheets `gộp` and `tách` |
+| `detail` | `chi-tiet-YYYY-MM.xlsx` | the detail report, one row per order, grouped by day |
 
 ```bash
 curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o orders-2026-11.csv "http://customer.local/api/orders/export?month=2026-11"
+curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o bao-cao-tong-hop-2026-11.xlsx "http://customer.local/api/orders/export?month=2026-11&report=summary"
+curl -H "X-Staff-Id: $STAFF_ID" -H "X-Staff-Password: $STAFF_PASSWORD" -o chi-tiet-2026-11.xlsx "http://customer.local/api/orders/export?month=2026-11&report=detail"
 ```
 
-A restaurant-app button will do the same (card `restaurant-orders-month-export-button`).
+The restaurant app does the same: the download button in the app bar ("Xuất đơn hàng theo tháng") asks for a month (the last 12), a report type ("Báo cáo tổng hợp theo ngày (Excel)" is preselected, then "Chi tiết từng đơn trong tháng (Excel)" and "Danh sách dòng món (CSV)") and the staff ID and password.
 
-- **What's in it:** one row per order line: date, time, order id, customer, item, quantity, unit price (base + toppings), toppings, line total, status. Headers are in Vietnamese. An order belongs to the month written in its `placedAt`, oldest first.
+- Any other `report` value is 400, and so is any `format` parameter (the first draft used `format=xlsx`; it is refused, not answered with a CSV). `report=summary` answers 503 when the five `SHOP_*` settings aren't all set; the app then says "Chưa cài đặt thông tin quán trên máy chủ".
+- **Both Excel reports count only `delivered` orders.** Income is not counted while an order is `awaiting_payment`, `preparing`, `ready` or `cancelled`. Each order counts under its payment method: an order stored without one counts as cash. They hold no customer names or order ids (the detail report shows each order's items, with quantity and toppings, e.g. `2 Xôi thịt (Thêm chả)`).
+- **Which day an order belongs to:** the date written in its `placedAt`, as written. That is the customer's device clock, taken as shop time with no time-zone conversion (so a phone with a wrong date puts the order on the wrong day, or month).
+- **Summary report** (`bao-cao-tong-hop`): the first lines are your `SHOP_*` details (the first line is `SHOP_NAME` exactly), then the title "SỔ CHI TIẾT DOANH THU BÁN HÀNG HÓA, DỊCH VỤ" and "Kỳ báo cáo: Tháng M năm YYYY". Every calendar day of the month has a row, **days with no orders show 0**. Sheet `gộp` has one amount per day (cash + transfer) and a `Tổng cộng` row. Sheet `tách` has `Chuyển khoản`, `Tiền mặt` and `Cộng` columns, and its month total row reads `Tổng tháng M` (e.g. `Tổng tháng 11`). Both end with the date, "NGƯỜI ĐẠI DIỆN HỘ KINH DOANH" and `SHOP_REPRESENTATIVE`. The totals are Excel `SUM` formulas.
+- **Detail report** (`chi-tiet`): one sheet, titled "Chi tiết tháng M/YYYY". For each day **that has at least one delivered order** (days without orders are **skipped**): a `Ngày DD/MM/YYYY` row, one row per order with its amount under `Tiền mặt` or `Chuyển khoản`, and a `Cộng ngày DD/MM/YYYY` row with the day's sums. A month with no delivered order gives just the header rows.
+- Reports never round or rewrite an amount. Open them in Excel; whether Excel draws them exactly like the owner's sample files is **unverified** (agents can't open Excel). `sample/*.xlsx` is reference only and git-ignored.
+
+- **What's in the CSV:** one row per order line: date, time, order id, customer, item, quantity, unit price (base + toppings), toppings, line total, status. Headers are in Vietnamese. An order belongs to the month written in its `placedAt`, oldest first.
 - **Opening it in Excel:** double-click it, or use Data → From Text/CSV.
   - The first line `sep=;` tells Excel to split columns on `;`, whatever your regional setting.
   - The file is UTF-8 with a BOM, so Vietnamese letters show correctly.
   - A text cell that started with `=`, `+`, `-` or `@` gets a leading `'`, so a customer name can never run as a formula.
 - **Old USD test orders:** prices like `9.5` are written with `.`, which Vietnamese Excel reads as text, so they won't sum. Delete those test orders first (after a dated backup) with `sqlite3`.
-- **The file holds customer names.** Don't commit it, and don't send it through unsafe channels.
-- **The staff ID and password don't make customer data private:** `GET /orders` and the live order stream are still open to anyone who can reach the apps. The staff ID and password only stop the export (and menu edits) from being used without them.
+- **The CSV holds customer names** (the two reports don't). Don't commit it, and don't send it through unsafe channels.
+- **The staff ID and password don't make customer data private:** `GET /orders` and the live order stream are still open to anyone who can reach the apps. The staff ID and password only stop the export, menu edits and the staff payment actions from being used without them.
 
 ### Staff ID and password
 
-Some routes are for staff only: `PATCH /menu/{id}` (change a price or mark an item sold out) and `GET /orders/export` (the month's orders as a CSV file). They need one shared staff ID and password, set when the backend starts. Type them in, so they stay out of your shell history:
+Some routes are for staff only: `PATCH /menu/{id}` (change a price or mark an item sold out), `GET /orders/export` (the month's orders as a CSV or Excel file) and the two staff payment routes, `POST /orders/{id}/confirm-payment` and `POST /orders/{id}/staff-switch-to-cash`. They need one shared staff ID and password, set when the backend starts. Type them in, so they stay out of your shell history:
 
 ```bash
 cd backend
@@ -417,13 +520,16 @@ sudo systemctl restart 'food-orders-mdns@*'
 In-app only (while tab is visible). Not web-push, not OS-level.
 
 **Restaurant side** (`lib/restaurant/pages/orders_page.dart`):
-- Watches `OrderRepository` for IDs that didn't exist on the previous tick with `status == pending` → fires a `SnackBar` with an "Accept" action and plays a two-note Web Audio chime (`lib/shared/chime.dart`).
-- AppBar shows a `Badge` with the live count of pending orders.
+- There is **no Accept step any more** (`pending` and `accepted` are gone): a cash order arrives `preparing`, and the card's main button goes `preparing` → "Đánh dấu sẵn sàng" → "Đánh dấu đã giao".
+- Watches `OrderRepository` for IDs it has not seen before. For every **new** id that arrives as `preparing` (cash) or `awaiting_payment` (transfer, not yet past its deadline) it plays a two-note Web Audio chime (`lib/shared/chime.dart`) and shows a plain `SnackBar` ("Đơn mới từ …", plus " — chờ chuyển khoản" for an unpaid transfer). One chime per update, however many orders arrived in it. The snackbar has no buttons.
+- **Each id rings at most once**, with one exception that is also "once": a transfer order that was already on screen as `awaiting_payment` when the page opened (so it never rang) rings when it becomes `preparing`. An order that arrived while the page was open already rang on arrival and does not ring again when it is paid. An expired order brought back as cash, or renewed, never rings again. Orders already loaded when the page opens don't ring. (Ring on arrival, on payment, or both is an open owner question; today it is on arrival.)
+- AppBar shows a `Badge` with the live count of `awaiting_payment` plus `preparing` orders (PAY10). An unpaid order whose `paymentDueAt` has passed counts as expired on the screen (the card shows "Hết hạn thanh toán" and a cancelled chip, and the badge drops it) even before the server's sweep cancels it.
+- The card shows the payment method, and for an unpaid transfer "Chưa thanh toán" and the transfer content; see "Payment by bank transfer".
 
 **Customer side** (`lib/customer/pages/menu_page.dart`):
 - `MyOrders` singleton (`lib/customer/state/my_orders.dart`) remembers IDs of orders placed in this browser session.
-- Banner at the top of the menu lists active (not delivered/cancelled) orders of the current customer with current status.
-- When the status of any tracked order changes, a `SnackBar` fires.
+- Banner at the top of the menu lists the customer's orders that have not ended (not delivered or cancelled) with the current status, plus transfer orders cancelled by the expiry while the 15-minute renew window is still open (by the phone's clock). A transfer order that is waiting for payment, or expired and still in that window, can be tapped to open the payment page.
+- When the status of any tracked order changes, a `SnackBar` fires ("Đơn #…: hết hạn thanh toán" for an expiry).
 
 ### Audio chime caveat (`lib/shared/chime_web.dart`)
 
@@ -441,13 +547,17 @@ If you ever rewrite with a different backend (Node, Go, Rust), SSE will Just Wor
 
 ## Known limitations
 
-- No auth — anyone who can reach `/api/orders/{id}` can mutate any order. Fine for local dev, not for anything else.
-- The month an order belongs to comes from its `placedAt`, which is the customer's own device clock. A phone with a wrong date puts its order in the wrong month of the export. A server-side timestamp would fix this (a future contract change).
+- No auth — anyone who can reach `/api/orders/{id}` can mutate any order. That includes the customer payment routes (`switch-to-cash`, `renew-payment`): anyone who knows an order id can switch an unpaid transfer order to cash or renew an expired one (see "Payment expiry and the payment routes"). Fine for local dev, not for anything else.
+- The day and month an order belongs to, in the CSV and both Excel reports, come from its `placedAt`, which is the customer's own device clock. A phone with a wrong date puts its order on the wrong day or in the wrong month. A server-side timestamp would fix this (a future contract change).
 - Customer names and orders are readable by anyone who can reach `/api/orders` (and the live stream); the staff login on the export doesn't change that.
 - `GET /orders` returns only the newest 500 orders. An older order that's still in progress drops out of the restaurant screen once 500 newer ones exist. That's fine at a small shop's volume; add paging or "active orders first" before it matters.
 - One shared staff ID and password (`STAFF_ID`, `STAFF_PASSWORD`) for staff-only routes, with no per-person staff accounts. Real staff login is needed before real customers.
-- **Prices are trusted from the client.** The server stores whatever item and topping prices an order sends, so a hand-made request could order something for 0 đ. Fix (MENU-DB3): look every item and topping up by `id` and price it from the menu. Required before real customers.
-- No payment, no delivery tracking, no multi-restaurant support. Deliberately out of scope.
+- **Prices are trusted from the client.** The server stores whatever item and topping prices an order sends, so a hand-made request could order something for 0 đ (a transfer order needs a total above 0, but any amount is accepted). The QR amount is computed from the stored items, so it equals the order total **the client sent**, not the menu price. Fix (MENU-DB3): look every item and topping up by `id` and price it from the menu. Required before real customers.
+- **Payment is confirmed by hand.** The bank doesn't tell the app when money arrives: staff look at the bank app and tap "Đã nhận chuyển khoản". A late or double transfer, and any refund, are handled by hand outside the app, which never moves money. A paid transfer order that staff cancel by mistake can't be moved back by the app.
+- The 5-minute countdown on the customer's phone uses the phone's clock, so it can be wrong on a phone with a wrong clock. The server's clock decides the expiry.
+- Whether the chime should ring when a transfer order arrives, when it is paid, or both is an open owner question (today: on arrival).
+- Whether a banking app opens the transfer with the right amount from the QR, whether the chime sounds, and whether Excel shows the two reports as the owner's samples are owner acceptance in the real environment: unverified by agents.
+- No delivery tracking, no multi-restaurant support. Deliberately out of scope.
 - SSE reconnect uses a plain 2-second backoff — add exponential backoff before shipping.
 
 ---

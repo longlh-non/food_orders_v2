@@ -89,7 +89,7 @@ void main() {
     ]);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Order #x1 — An'), findsOneWidget);
+    expect(find.text('Đơn #x1 — An'), findsOneWidget);
   });
 
   testWidgets('line subtotal is (price + toppings) x quantity, in VNĐ', (
@@ -102,8 +102,8 @@ void main() {
     // (25.000 + 10.000 + 8.000) x 2 = 86.000; plus 4.000 = 90.000.
     expect(find.text(formatVnd(86000)), findsOneWidget);
     expect(find.text(formatVnd(4000)), findsOneWidget);
-    expect(find.text('Total: ${formatVnd(90000)}'), findsOneWidget);
-    expect(find.text('Total: 90.000 VNĐ'), findsOneWidget);
+    expect(find.text('Tổng: ${formatVnd(90000)}'), findsOneWidget);
+    expect(find.text('Tổng: 90.000 VNĐ'), findsOneWidget);
     expect(find.textContaining(r'$'), findsNothing);
   });
 
@@ -116,7 +116,7 @@ void main() {
 
     expect(find.text('1× Trà đá'), findsOneWidget);
     expect(find.textContaining('+ '), findsNothing);
-    expect(find.text('Total: ${formatVnd(4000)}'), findsOneWidget);
+    expect(find.text('Tổng: ${formatVnd(4000)}'), findsOneWidget);
   });
 
   // Text x2.0 is not tested: the test font draws every letter 1 em wide, so
@@ -157,8 +157,45 @@ void main() {
     });
   }
 
+  group('Vietnamese status chip and action label (vi-translate)', () {
+    Order of(OrderStatus status, {String id = 'order-0001'}) => Order(
+      id: id,
+      customerName: 'An',
+      items: [OrderItem(name: 'Trà đá', quantity: 1, price: 4000)],
+      status: status,
+      placedAt: DateTime(2026, 11, 19),
+    );
+
+    testWidgets('every status shows its own Vietnamese chip text', (
+      tester,
+    ) async {
+      await pumpOrders(tester, [
+        for (final s in OrderStatus.values) of(s, id: 'order-${s.name}'),
+      ]);
+      for (final s in OrderStatus.values) {
+        expect(find.text(s.label), findsWidgets, reason: s.name);
+      }
+    });
+
+    testWidgets('preparing shows the "Đánh dấu sẵn sàng" action; '
+        'ready shows "Đánh dấu đã giao"', (tester) async {
+      await pumpOrders(tester, [
+        of(OrderStatus.preparing, id: 'order-preparing'),
+        of(OrderStatus.ready, id: 'order-ready'),
+      ]);
+      expect(
+        find.widgetWithText(FilledButton, 'Đánh dấu sẵn sàng'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Đánh dấu đã giao'),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('status changes report failure', () {
-    const failure = "Couldn't update the order. Try again.";
+    const failure = 'Không thể cập nhật đơn hàng. Thử lại.';
     final plain = OrderItem(name: 'Trà đá', quantity: 1, price: 4000);
 
     /// The repository answers every request with [respond].
@@ -183,7 +220,9 @@ void main() {
           orderWith([plain]),
         ]);
 
-        await tester.tap(find.widgetWithText(FilledButton, 'Mark ready'));
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Đánh dấu sẵn sàng'),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text(failure), findsOneWidget);
@@ -205,13 +244,13 @@ void main() {
       );
       await pumpOrders(tester, [order]);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Mark ready'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Đánh dấu sẵn sàng'));
       await tester.pumpAndSettle();
 
       expect(find.text(failure), findsNothing);
       expect(statusOf('order-0001'), OrderStatus.ready);
       expect(
-        find.widgetWithText(FilledButton, 'Mark delivered'),
+        find.widgetWithText(FilledButton, 'Đánh dấu đã giao'),
         findsOneWidget,
       );
     });
@@ -227,7 +266,7 @@ void main() {
       ]);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('New order from An'), findsOneWidget);
+      expect(find.text('Đơn mới từ An'), findsOneWidget);
       expect(find.byType(SnackBarAction), findsNothing);
     });
   });
@@ -366,9 +405,12 @@ void main() {
         make('order-100002', OrderStatus.ready),
         make('order-100003', OrderStatus.delivered),
       ], now: () => now);
-      expect(find.widgetWithText(FilledButton, 'Mark ready'), findsOneWidget);
       expect(
-        find.widgetWithText(FilledButton, 'Mark delivered'),
+        find.widgetWithText(FilledButton, 'Đánh dấu sẵn sàng'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Đánh dấu đã giao'),
         findsOneWidget,
       );
       expect(find.byType(FilledButton), findsNWidgets(2));
@@ -430,7 +472,7 @@ void main() {
         await start(tester, []);
         await arrive(tester, [make('order-100001', OrderStatus.preparing)]);
         expect(rings, 1);
-        expect(find.text('New order from An'), findsOneWidget);
+        expect(find.text('Đơn mới từ An'), findsOneWidget);
         expect(find.byType(SnackBarAction), findsNothing);
       });
 
@@ -442,10 +484,7 @@ void main() {
           transfer('order-100001', OrderStatus.awaiting_payment, due: soon),
         ]);
         expect(rings, 1);
-        expect(
-          find.text('New order from An — chờ chuyển khoản'),
-          findsOneWidget,
-        );
+        expect(find.text('Đơn mới từ An — chờ chuyển khoản'), findsOneWidget);
         expect(find.byType(SnackBarAction), findsNothing);
         await tester.pumpWidget(const SizedBox());
       });
@@ -588,8 +627,9 @@ void main() {
         find.widgetWithText(OutlinedButton, 'Đã nhận chuyển khoản');
     Finder switchButton() =>
         find.widgetWithText(OutlinedButton, 'Chuyển sang tiền mặt');
-    Finder idField() => find.widgetWithText(TextField, 'Staff ID');
-    Finder passwordField() => find.widgetWithText(TextField, 'Staff password');
+    Finder idField() => find.widgetWithText(TextField, 'Mã nhân viên');
+    Finder passwordField() =>
+        find.widgetWithText(TextField, 'Mật khẩu nhân viên');
     Finder confirmDialogButton() =>
         find.widgetWithText(FilledButton, 'Xác nhận');
 
@@ -780,7 +820,7 @@ void main() {
         await tester.tap(confirmButton());
         await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsOneWidget);
-        await tester.tap(find.text('Cancel'));
+        await tester.tap(find.text('Hủy'));
         await tester.pumpAndSettle();
         expect(find.byType(AlertDialog), findsNothing);
         expect(posts, isEmpty);
@@ -822,7 +862,7 @@ void main() {
 
       expect(StaffCredentialsHolder.instance.value, isNull);
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('Wrong staff ID or password'), findsOneWidget);
+      expect(find.text('Sai mã nhân viên hoặc mật khẩu'), findsOneWidget);
       // The holder was cleared, so the new dialog starts empty.
       expect(tester.widget<TextField>(idField()).controller!.text, isEmpty);
 
@@ -908,9 +948,9 @@ void main() {
         expect(confirmButton(), findsNothing);
         expect(switchButton(), findsNothing);
         // The tap's own answer is what's left on screen, not overwritten
-        // by the chime's "New order from …" snackbar.
+        // by the chime's "Đơn mới từ …" snackbar.
         expect(find.text('Đơn này đã được xử lý'), findsOneWidget);
-        expect(find.textContaining('New order from'), findsNothing);
+        expect(find.textContaining('Đơn mới từ'), findsNothing);
       },
     );
 
@@ -930,7 +970,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Use plain letters, digits and symbols, no accents'),
+        find.text('Chỉ dùng chữ không dấu, số và ký hiệu thông thường'),
         findsOneWidget,
       );
       expect(find.byType(AlertDialog), findsOneWidget);

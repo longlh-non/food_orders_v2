@@ -62,3 +62,7 @@ Widget and unit tests in `test/` with fake clients (no network):
 ## Environment limits
 
 Agents cannot run the backend with real credentials, the browser, Caddy, or a phone. The owner chooses and exports `STAFF_ID` and `STAFF_PASSWORD`. Agents never run `sudo`.
+
+## Deviation recorded 2026-11-23 (found while executing)
+
+The Goal's "two decimals" for prices is a leftover from the USD era. Prices are whole VND and are shown only with `formatVnd` ("25.000 VNĐ"), as `CLAUDE.md` says; the price dialog takes plain whole digits (0 to 1,000,000) and rejects "25.000". Implemented that way, and the reviewer agreed.

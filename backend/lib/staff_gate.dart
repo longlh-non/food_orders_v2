@@ -22,7 +22,8 @@ const lockoutWindow = Duration(seconds: 60);
 // Header values must stay plain: browsers refuse other characters there.
 final _printableAscii = RegExp(r'^[\x20-\x7E]+$');
 
-/// The check in front of staff-only routes (the month export, menu writes).
+/// The check in front of staff-only routes (the month export, menu writes,
+/// staff switch to cash and confirm payment).
 ///
 /// The backend reads `STAFF_ID` and `STAFF_PASSWORD` from its environment and
 /// passes them here; both are trimmed. It fails closed: unless the ID is 1 to
@@ -41,11 +42,16 @@ final _printableAscii = RegExp(r'^[\x20-\x7E]+$');
 /// process environment, and sent over plain HTTP on the wifi. Real staff
 /// login is still needed before real customers.
 class StaffGate {
+  /// [id] and [password] normally come from `STAFF_ID` and `STAFF_PASSWORD`.
+  /// A value that is missing or breaks the rules is dropped, which leaves the
+  /// gate disabled. [now] is the clock for the lockout; tests inject one.
   StaffGate({String? id, String? password, DateTime Function()? now})
     : _id = _usableId(id?.trim()),
       _password = _usablePassword(password?.trim()),
       _now = now ?? DateTime.now;
 
+  /// [id] if it is 1 to [maxStaffIdLength] printable ASCII characters, else
+  /// null.
   static String? _usableId(String? id) =>
       (id != null &&
           id.isNotEmpty &&
@@ -54,6 +60,8 @@ class StaffGate {
       ? id
       : null;
 
+  /// [password] if it is at least [minStaffPasswordLength] printable ASCII
+  /// characters, else null.
   static String? _usablePassword(String? password) =>
       (password != null &&
           password.length >= minStaffPasswordLength &&
@@ -61,12 +69,19 @@ class StaffGate {
       ? password
       : null;
 
+  /// The configured ID and password; null when missing or unusable. Never
+  /// printed, logged or sent.
   final String? _id;
   final String? _password;
+
+  /// The clock for the lockout (tests inject one).
   final DateTime Function() _now;
 
   /// Times of the recent wrong attempts; never more than [maxStaffFailures].
   final List<DateTime> _failures = [];
+
+  /// While the clock is before this, every request gets 429; null = not
+  /// locked. Held in memory only, so a restart clears it.
   DateTime? _lockedUntil;
 
   /// Whether staff routes can be used at all. Safe to print: it says
@@ -117,6 +132,8 @@ class StaffGate {
   }
 }
 
+/// A JSON `{"error": message}` reply with a fixed [message], plus any extra
+/// [headers] (the 429 adds `retry-after`).
 Response _error(int status, String message, {Map<String, String>? headers}) =>
     Response(
       status,

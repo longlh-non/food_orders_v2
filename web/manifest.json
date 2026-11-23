@@ -1,11 +1,11 @@
 {
-    "name": "food_orders",
-    "short_name": "food_orders",
+    "name": "Đặt Món",
+    "short_name": "Đặt Món",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#EEE9E3",
     "theme_color": "#7E1109",
-    "description": "A new Flutter project.",
+    "description": "Đặt món và theo dõi đơn hàng trực tuyến.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

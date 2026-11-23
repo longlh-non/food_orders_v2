@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../shared/api/order_repository.dart';
+import '../shared/l10n.dart';
 import '../shared/theme.dart';
 import 'pages/orders_page.dart';
 
@@ -13,19 +14,32 @@ import 'pages/orders_page.dart';
 /// comes up, then runApp. The restaurant view reads the same singleton
 /// [OrderRepository] but only the OrdersPage uses the data.
 void main() {
+  // Restore the saved language first, so the first frame is already in it.
+  LocaleController.instance.init();
   OrderRepository.instance.init();
   runApp(const RestaurantApp());
 }
 
+/// Root widget of the restaurant app: a [MaterialApp] with the restaurant
+/// theme whose only screen is [OrdersPage]. It holds no state of its own.
 class RestaurantApp extends StatelessWidget {
   const RestaurantApp({super.key});
 
+  /// Builds the app shell (title, theme, language, home screen). It watches
+  /// only [LocaleController]; [OrdersPage] listens to the orders itself.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Food Orders — Restaurant',
-      theme: restaurantTheme(),
-      home: const OrdersPage(),
+    // Rebuilds the MaterialApp when the user picks another language.
+    return ListenableBuilder(
+      listenable: LocaleController.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'Đặt Món — Nhà hàng',
+        theme: restaurantTheme(),
+        locale: LocaleController.instance.locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const OrdersPage(),
+      ),
     );
   }
 }

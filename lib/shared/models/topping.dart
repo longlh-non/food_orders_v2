@@ -7,6 +7,8 @@ import 'display_text.dart';
 class Topping {
   final String id;
   final String name;
+
+  /// VND, whole number (never cents).
   final double price;
 
   const Topping({required this.id, required this.name, required this.price});

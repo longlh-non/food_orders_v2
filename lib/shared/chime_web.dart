@@ -1,8 +1,10 @@
 import 'package:web/web.dart' as web;
 
-// Single AudioContext for the app's lifetime. Creating one per chime leaks
-// and some browsers cap the total count per origin.
+/// Single AudioContext for the app's lifetime. Creating one per chime leaks
+/// and some browsers cap the total count per origin.
 web.AudioContext? _ctx;
+
+/// Returns the shared context, creating it on first use.
 web.AudioContext _context() => _ctx ??= web.AudioContext();
 
 /// Plays a short two-note "ding-ding" using the Web Audio API.

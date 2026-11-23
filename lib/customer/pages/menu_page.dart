@@ -17,10 +17,13 @@ import 'payment_qr_page.dart';
 /// Three jobs:
 ///   1. Show the menu (loaded from the backend by [MenuState]) as a grid and
 ///      let the user add items to [Cart].
-///   2. Show a "Your orders" banner at the top for any orders this session
-///      has placed (via [MyOrders]) that aren't yet terminal.
+///   2. Show an "Đơn của bạn" banner at the top for any orders this session
+///      has placed (via [MyOrders]) that are still active: not delivered or
+///      cancelled, plus expired unpaid transfer orders that can still be
+///      renewed. A transfer order waiting for payment (or expired and
+///      renewable) can be tapped to open the payment page.
 ///   3. Fire a snackbar when the status of one of this session's orders
-///      changes (customer sees "Your order is being prepared" live).
+///      changes (for example "Đơn #1234: Đang chuẩn bị", shown live).
 ///
 /// Stateful because it keeps a diff of statuses across repo notifications
 /// so it can detect transitions rather than just showing the current state.
@@ -34,6 +37,8 @@ class MenuPage extends StatefulWidget {
   State<MenuPage> createState() => _MenuPageState();
 }
 
+/// State for [MenuPage]: the last-seen order statuses, the menu being shown
+/// and the listeners that keep the page and the cart up to date.
 class _MenuPageState extends State<MenuPage> {
   /// Last-seen status per tracked order id. Used to detect transitions.
   final _lastStatuses = <String, OrderStatus>{};
@@ -43,6 +48,8 @@ class _MenuPageState extends State<MenuPage> {
   /// The menu list we last synced the cart against.
   List<MenuItem>? _syncedMenu;
 
+  /// Starts listening to the order cache, [MyOrders] and the menu, and
+  /// records the current statuses so the first pass shows no snackbar.
   @override
   void initState() {
     super.initState();
@@ -54,6 +61,8 @@ class _MenuPageState extends State<MenuPage> {
     _syncedMenu = _menu.items;
   }
 
+  /// Removes the three listeners added in [initState], so the singletons
+  /// don't call into a page that is gone.
   @override
   void dispose() {
     OrderRepository.instance.removeListener(_onRepoChanged);
@@ -73,11 +82,12 @@ class _MenuPageState extends State<MenuPage> {
       _menu.toppings,
     );
     final notes = [
-      if (repriced == 1) 'The price of 1 item in your cart changed',
-      if (repriced > 1) 'Prices of $repriced items in your cart changed',
-      if (removed == 1) '1 item is no longer on the menu and was removed',
+      if (repriced == 1) 'Giá của 1 món trong giỏ hàng đã thay đổi',
+      if (repriced > 1) 'Giá của $repriced món trong giỏ hàng đã thay đổi',
+      if (removed == 1)
+        '1 món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng',
       if (removed > 1)
-        '$removed items are no longer on the menu and were removed',
+        '$removed món không còn trong thực đơn và đã bị xóa khỏi giỏ hàng',
     ];
     if (notes.isNotEmpty) {
       ScaffoldMessenger.of(context)
@@ -86,6 +96,8 @@ class _MenuPageState extends State<MenuPage> {
     }
   }
 
+  /// Runs when the order cache or [MyOrders] changes: checks for status
+  /// changes (snackbar) and rebuilds so the banner is current.
   void _onRepoChanged() {
     if (!mounted) return;
     _syncStatuses();
@@ -109,7 +121,7 @@ class _MenuPageState extends State<MenuPage> {
               content: Text(
                 order.expiredUnpaid
                     ? 'Đơn #${_shortId(order.id)}: hết hạn thanh toán'
-                    : 'Order #${_shortId(order.id)}: ${order.status.label}',
+                    : 'Đơn #${_shortId(order.id)}: ${order.status.label}',
               ),
             ),
           );
@@ -134,6 +146,9 @@ class _MenuPageState extends State<MenuPage> {
     }).toList();
   }
 
+  /// The whole screen: app bar, category tiles, the menu tabs and the round
+  /// cart button. The page rebuilds when orders change ([_onRepoChanged]); the
+  /// tabs also rebuild when the menu loads (`ListenableBuilder` on [_menu]).
   @override
   Widget build(BuildContext context) {
     final myActive = _myActiveOrders;
@@ -142,7 +157,7 @@ class _MenuPageState extends State<MenuPage> {
     return DefaultTabController(
       length: _tabs.length,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Menu')),
+        appBar: AppBar(title: const Text('Thực đơn')),
         // One cart button, round and red, docked in the middle of a slim
         // bar at the bottom (decision NAV1). The cart opens as its own page
         // on top (NAV2), so the chosen category is still there on return.
@@ -192,10 +207,10 @@ class _MenuPageState extends State<MenuPage> {
     if (_menu.error != null) {
       return _MenuMessage(
         // Generic on purpose: never show the raw error to customers.
-        text: "Couldn't load the menu",
+        text: 'Không tải được thực đơn',
         action: FilledButton(
           onPressed: _menu.isLoading ? null : _menu.load,
-          child: const Text('Retry'),
+          child: const Text('Thử lại'),
         ),
       );
     }
@@ -211,6 +226,8 @@ class _MenuPageState extends State<MenuPage> {
 class _CartButton extends StatelessWidget {
   const _CartButton();
 
+  /// A floating button with a count badge. A `ListenableBuilder` rebuilds it
+  /// whenever the [Cart] calls `notifyListeners`.
   @override
   Widget build(BuildContext context) {
     final cart = Cart.instance;
@@ -218,7 +235,7 @@ class _CartButton extends StatelessWidget {
     return ListenableBuilder(
       listenable: cart,
       builder: (context, _) => FloatingActionButton(
-        tooltip: 'Cart',
+        tooltip: 'Giỏ hàng',
         shape: const CircleBorder(),
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -252,6 +269,8 @@ const _tabs = <(MenuCategory, String, IconData)>[
 class _CategoryBar extends StatelessWidget {
   const _CategoryBar();
 
+  /// A scrollable `TabBar` with one [_CategoryTile] per entry in [_tabs],
+  /// tall enough for the icon and label at the user's text size.
   @override
   Widget build(BuildContext context) {
     // Room for the icon and one line of label at the user's text size,
@@ -297,6 +316,8 @@ class _CategoryTile extends StatelessWidget {
   final String label;
   final IconData icon;
 
+  /// Draws the tile, selected or not. It listens to the tab controller's
+  /// animation (`AnimatedBuilder`), so it restyles as the tab changes.
   @override
   Widget build(BuildContext context) {
     final controller = DefaultTabController.of(context);
@@ -351,7 +372,7 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-/// One tab: the "Your orders" banner (scrolls away with the grid), then the
+/// One tab: the "Đơn của bạn" banner (scrolls away with the grid), then the
 /// tab's items, or a short message when the category has none yet.
 class _TabContent extends StatelessWidget {
   const _TabContent({
@@ -367,6 +388,8 @@ class _TabContent extends StatelessWidget {
   /// For the add dialog's toppings and drinks.
   final MenuState menu;
 
+  /// A scrolling list: the banner (if any orders are active), then a grid of
+  /// [_MenuTile]s or an empty-category message. Gets its data from the parent.
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
@@ -412,6 +435,7 @@ class _MenuMessage extends StatelessWidget {
   final String text;
   final Widget? action;
 
+  /// Centers [text] with the optional [action] button under it.
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -439,6 +463,8 @@ class _MyOrdersBanner extends StatelessWidget {
   final List<Order> orders;
   const _MyOrdersBanner({required this.orders});
 
+  /// A tinted box with the "Đơn của bạn" title and one [_BannerRow] per
+  /// order: short id, status (or "Hết hạn thanh toán") and total in VND.
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -454,7 +480,7 @@ class _MyOrdersBanner extends StatelessWidget {
                 Icon(Icons.receipt_long, color: scheme.onPrimaryContainer),
                 const SizedBox(width: 8),
                 Text(
-                  'Your orders',
+                  'Đơn của bạn',
                   style: TextStyle(
                     color: scheme.onPrimaryContainer,
                     fontWeight: FontWeight.bold,
@@ -502,6 +528,8 @@ class _BannerRow extends StatelessWidget {
   final Order order;
   final Widget child;
 
+  /// Shows [child] as a plain padded row, or wrapped in a tappable area (at
+  /// least 48 px tall) that opens the payment page when [order] needs it.
   @override
   Widget build(BuildContext context) {
     final opensPayment =
@@ -527,16 +555,40 @@ class _BannerRow extends StatelessWidget {
 }
 
 /// One menu item in the grid: picture, name, price and a round "+".
+///
+/// A sold-out item (`available == false`) is dimmed, carries a "Hết hàng"
+/// label over its picture and has a disabled "+"; the tile keeps its size.
 class _MenuTile extends StatelessWidget {
   final MenuItem item;
   final MenuState menu;
   const _MenuTile({required this.item, required this.menu});
 
+  /// A card with the picture, the name (two lines at most), the price and
+  /// the "+" button, which calls [_add] (null when sold out). A sold-out card
+  /// is drawn at half opacity with the [_SoldOutLabel] on top, undimmed.
   @override
   Widget build(BuildContext context) {
+    final card = _card(context);
+    if (item.available) return card;
+    return Stack(
+      children: [
+        Positioned.fill(child: Opacity(opacity: 0.5, child: card)),
+        const Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: 96,
+          child: Center(child: _SoldOutLabel()),
+        ),
+      ],
+    );
+  }
+
+  /// The card itself: picture on top, then the name, then price and "+".
+  Widget _card(BuildContext context) {
     final text = Theme.of(context).textTheme;
     // White rounded card with a soft shadow (from the customer theme's
-    // cardTheme): picture on top, then the name, then price and a round "+".
+    // cardTheme).
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -572,8 +624,8 @@ class _MenuTile extends StatelessWidget {
                         ),
                       ),
                       AddItemButton(
-                        tooltip: 'Add ${item.name}',
-                        onPressed: () => _add(context),
+                        tooltip: 'Thêm ${item.name}',
+                        onPressed: item.available ? () => _add(context) : null,
                       ),
                     ],
                   ),
@@ -586,10 +638,12 @@ class _MenuTile extends StatelessWidget {
     );
   }
 
+  /// Does nothing for a sold-out item (the "+" is disabled anyway).
   /// Drinks, snacks and Ăn vặt items go straight into the cart. A food asks
-  /// "Extra toppings? A drink?" first (when there is anything to offer), and
+  /// "Thêm topping" / "Thêm đồ uống" first (when there is anything to offer), and
   /// the cart changes only once the customer confirms; a cancel adds nothing.
   Future<void> _add(BuildContext context) async {
+    if (!item.available) return;
     final drinks = [
       for (final i in menu.items)
         if (i.category == MenuCategory.drink) i,
@@ -616,10 +670,36 @@ class _MenuTile extends StatelessWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('Added $added'),
+          content: Text('Đã thêm $added'),
           duration: const Duration(milliseconds: 800),
         ),
       );
+  }
+}
+
+/// The "Hết hàng" (sold out) pill shown over a sold-out tile's picture. Dark
+/// with white text, so it stays readable on any photo.
+class _SoldOutLabel extends StatelessWidget {
+  const _SoldOutLabel();
+
+  /// A small rounded dark box with the label, one line.
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(
+          'Hết hàng',
+          maxLines: 1,
+          style: Theme.of(context).textTheme.labelLarge
+              ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 }
 
@@ -638,6 +718,8 @@ class _TileImage extends StatelessWidget {
   /// without decoding a big photo at full size.
   static const _decodeWidth = 480;
 
+  /// Loads the picture over the network, or shows the placeholder when the
+  /// item has no picture, while it loads, or if the load fails.
   @override
   Widget build(BuildContext context) {
     final url = OrderApiClient.imageUrlFor(item);
@@ -667,6 +749,7 @@ class _TileImagePlaceholder extends StatelessWidget {
 
   final double height;
 
+  /// A block of [height] filled with a theme colour and a restaurant icon.
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -687,7 +770,7 @@ class _TileImagePlaceholder extends StatelessWidget {
 /// The small round dark-red "+" on a menu tile. The circle is 36 px, but the
 /// tap area stays at least 48 x 48 so it is easy to hit with a thumb. With
 /// [onPressed] null it shows Flutter's disabled (greyed) colours and keeps
-/// its tooltip; a sold-out item will use that.
+/// its tooltip (the menu tile does this for a sold-out item).
 @visibleForTesting
 class AddItemButton extends StatelessWidget {
   const AddItemButton({
@@ -696,10 +779,11 @@ class AddItemButton extends StatelessWidget {
     required this.onPressed,
   });
 
-  /// Also the screen reader label, e.g. "Add Xôi thịt".
+  /// Also the screen reader label, e.g. "Thêm Xôi thịt".
   final String tooltip;
   final VoidCallback? onPressed;
 
+  /// A small filled icon button with a "+" icon, [tooltip] and [onPressed].
   @override
   Widget build(BuildContext context) {
     return IconButton.filled(

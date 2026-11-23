@@ -11,6 +11,9 @@ import '../../shared/models/topping.dart';
 /// "Xôi thịt + chả" added twice is one line with quantity 2, while plain
 /// "Xôi thịt" is a separate line.
 class CartLine {
+  /// Makes a line for [item] with [toppings]. A topping listed twice is kept
+  /// once, and the stored list can't be changed afterwards, so a line's
+  /// identity can't shift while it is a key in the cart's map.
   CartLine(this.item, [List<Topping> toppings = const []])
     : toppings = List.unmodifiable(_uniqueById(toppings));
 
@@ -35,6 +38,7 @@ class CartLine {
   int get hashCode =>
       Object.hash(item.id, Object.hashAllUnordered(_toppingIds));
 
+  /// Drops repeated toppings (same id), keeping the first and the order.
   static List<Topping> _uniqueById(List<Topping> toppings) {
     final seen = <String>{};
     return [
@@ -49,8 +53,16 @@ class CartLine {
 /// Singleton `ChangeNotifier` — only one customer flow is active in a browser
 /// tab at a time. Not persisted; refreshing clears it. State moves to the
 /// server-side `Order` once the customer places the order.
+///
+/// Holds a map from [CartLine] to quantity, in the order lines were first
+/// added. The cart button on the menu page and the cart page listen through
+/// `ListenableBuilder`; [add], [remove], [clear] and [refreshItems] call
+/// `notifyListeners` so they redraw.
 class Cart extends ChangeNotifier {
+  /// Private, so nobody can make a second cart; use [instance].
   Cart._();
+
+  /// The one cart shared by the whole customer app.
   static final Cart instance = Cart._();
 
   final Map<CartLine, int> _lines = {};
@@ -59,7 +71,7 @@ class Cart extends ChangeNotifier {
   Map<CartLine, int> get lines => Map.unmodifiable(_lines);
   bool get isEmpty => _lines.isEmpty;
 
-  /// Total quantity across all lines (shown on the AppBar badge).
+  /// Total quantity across all lines (shown in the badge on the round cart button).
   int get itemCount => _lines.values.fold(0, (sum, qty) => sum + qty);
 
   double get total =>
@@ -125,6 +137,7 @@ class Cart extends ChangeNotifier {
     return (removed: removed, repriced: repriced);
   }
 
+  /// Empties the cart and notifies listeners (used after an order is placed).
   void clear() {
     _lines.clear();
     notifyListeners();

@@ -18,14 +18,21 @@ class MenuApi {
   /// Without a [staffGate], menu writes are disabled (403): fail closed.
   MenuApi(this._db, {StaffGate? staffGate}) : _gate = staffGate ?? StaffGate();
 
+  /// Shared with `OrdersApi`; opened and closed by `bin/server.dart`.
   final Database _db;
+
+  /// Guards `PATCH /menu/{id}`, the only staff route here.
   final StaffGate _gate;
 
+  /// The shelf handler for `/menu` and `/toppings`, with CORS applied.
+  /// Built on first use. Request logging is left to `bin/server.dart`.
   late final Handler handler = _buildHandler();
 
+  /// Creates the router with the three routes below and wraps it with CORS.
   Handler _buildHandler() {
     final router = Router();
 
+    // GET /menu (public): 200 with every item in insertion order.
     // Read on every request, no caching: an edit made with the sqlite3 CLI
     // shows up on the next GET without restarting the backend.
     router.get('/menu', (Request req) {
@@ -33,8 +40,11 @@ class MenuApi {
       return _json([for (final row in rows) _itemJson(row)]);
     });
 
-    // Staff only: change an item's price and/or sold-out switch. The staff
-    // ID and password are checked before the body is read; the id is only ever a bound
+    // PATCH /menu/{id} (staff only): change an item's price and/or sold-out
+    // switch. Answers 200 with the updated item, 401 / 403 / 429 from the
+    // staff check (made before the body is read), 413 body over 4 KB, 400 a
+    // body that isn't valid JSON or breaks [_menuEditProblem], 404 unknown id
+    // (or an id with a broken `%` escape). The id is only ever a bound
     // parameter. Only the named fields change (last write wins).
     router.patch('/menu/<id>', (Request req, String rawId) async {
       final denied = _gate.check(req);
@@ -82,6 +92,8 @@ class MenuApi {
       return _json(_itemJson(row));
     });
 
+    // GET /toppings (public, read-only): 200 with every topping in insertion
+    // order, as `{id, name, price}`.
     router.get('/toppings', (Request req) {
       final rows = _db.select(
         'SELECT id, name, price FROM toppings ORDER BY rowid',
@@ -98,6 +110,7 @@ class MenuApi {
   }
 }
 
+/// The columns of `menu_items` that `GET /menu` and the `PATCH` reply read.
 const _selectItems =
     'SELECT id, name, description, price, category, allow_toppings, image, '
     'available FROM menu_items';
@@ -128,7 +141,9 @@ const maxMenuPrice = 1000000;
 /// reading it all. The proxy also caps bodies at 64 KB.
 const maxMenuEditBytes = 4096;
 
-/// The body as text, or null when it is longer than [maxMenuEditBytes].
+/// The body as text, or null when it is longer than [maxMenuEditBytes]. Checks
+/// the declared length first, then counts while reading, so a huge body is
+/// never held in memory in full.
 Future<String?> _readSmallBody(Request req) async {
   final declared = req.contentLength;
   if (declared != null && declared > maxMenuEditBytes) return null;
@@ -167,6 +182,7 @@ String? _menuEditProblem(Object? edit) {
   return null;
 }
 
+/// Wraps any JSON-serialisable value as a 200 response.
 Response _json(Object body) => Response.ok(
   jsonEncode(body),
   headers: {'Content-Type': 'application/json'},

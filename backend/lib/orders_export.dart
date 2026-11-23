@@ -3,9 +3,8 @@ import 'dart:convert';
 /// Monthly orders export: turns orders (the `Order.toJson()` shape stored by
 /// the backend) into the bytes of a CSV file that Excel opens correctly.
 ///
-/// Pure functions only: no database, no files, no network. A separate
-/// command (card `backend-orders-month-export-cli`) wires them to the
-/// database.
+/// Pure functions only: no database, no files, no network. The staff route
+/// `GET /orders/export` in `orders_api.dart` reads the orders and calls them.
 
 /// The column headers, in Vietnamese because the file is for the shop.
 const exportHeader = [
@@ -21,6 +20,7 @@ const exportHeader = [
   'Trạng thái',
 ];
 
+/// The accepted form of a month: `YYYY-MM`, month 01 to 12.
 final _month = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
 
 /// True for exactly `YYYY-MM` with a month from 01 to 12.
@@ -64,6 +64,9 @@ List<List<Object>> exportRows(List<Map<String, dynamic>> orders) => [
       _row(order, item),
 ];
 
+/// One CSV row for one order line, in [exportHeader] order. Date and time are
+/// cut out of the `placedAt` text (no time zone conversion); the unit price is
+/// the base price plus all toppings.
 List<Object> _row(Map<String, dynamic> order, Map<String, dynamic> item) {
   final placedAt = order['placedAt'] as String;
   final toppings = ((item['toppings'] as List?) ?? const [])
@@ -94,6 +97,7 @@ List<Object> _row(Map<String, dynamic> order, Map<String, dynamic> item) {
   ];
 }
 
+/// First characters that make Excel treat a cell as a formula.
 const _formulaStarts = {'=', '+', '-', '@', '\t', '\r'};
 
 /// Stops text from running as a formula when Excel opens the file
@@ -130,6 +134,8 @@ List<int> csvBytes(
   return [0xEF, 0xBB, 0xBF, ...utf8.encode(text.toString())];
 }
 
+/// One cell as text: numbers bare (whole ones without decimals), other values
+/// quoted only when they contain [delimiter], `"`, CR or LF.
 String _cell(Object cell, String delimiter) {
   if (cell is num) {
     return cell.isFinite && cell == cell.truncate()
@@ -147,6 +153,7 @@ String _cell(Object cell, String delimiter) {
 
 /// What the export command prints after writing the file.
 class ExportSummary {
+  /// Plain value holder; [summarise] builds it.
   const ExportSummary({
     required this.orders,
     required this.lines,
@@ -155,7 +162,10 @@ class ExportSummary {
     required this.nonWholeLines,
   });
 
+  /// How many orders were summarised.
   final int orders;
+
+  /// How many order lines (CSV rows) they have.
   final int lines;
 
   /// VND per status, e.g. `{'delivered': 125000, 'cancelled': 25000}`.
@@ -169,6 +179,9 @@ class ExportSummary {
   final int nonWholeLines;
 }
 
+/// Counts [orders], their lines and the line totals per status. Also counts
+/// lines with a non-whole price or quantity. Nothing in `lib/` or `bin/` calls
+/// it today; only the tests do.
 ExportSummary summarise(List<Map<String, dynamic>> orders) {
   final totals = <String, num>{};
   var lines = 0;

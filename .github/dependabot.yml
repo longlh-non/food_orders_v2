@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # GitHub Actions used in .github/workflows/*.yml (pinned by SHA; Dependabot
+  # bumps the pin and the version comment together).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  # The Flutter package (customer + restaurant apps). Does not include the
+  # Flutter SDK/channel itself: that is pinned by hand in ci.yml (see the
+  # comment there) and is never touched by Dependabot.
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+
+  # The backend Dart package. A sqlite3 bump changes the precompiled binary
+  # its build hook downloads, so that PR needs a human look before merging
+  # (never auto-merge; see docs/ci-cd-decisions.md D2).
+  - package-ecosystem: "pub"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3

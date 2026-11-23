@@ -108,12 +108,40 @@ void main() {
 
   Finder placeButton() => find.byType(FilledButton);
 
+  testWidgets('empty cart shows the Vietnamese title and empty text', (
+    tester,
+  ) async {
+    Cart.instance.clear();
+    await tester.pumpWidget(
+      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Giỏ hàng của bạn'), findsOneWidget);
+    expect(find.text('Giỏ hàng trống.'), findsOneWidget);
+  });
+
+  testWidgets('empty name: the Vietnamese "enter your name" SnackBar', (
+    tester,
+  ) async {
+    Cart.instance.add(xoiThit);
+    await tester.pumpWidget(
+      MaterialApp(home: CartPage(paymentClient: paymentClient())),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Tên của bạn'), findsOneWidget);
+    expect(find.text('Tổng cộng: 25.000 VNĐ'), findsOneWidget);
+    await tester.tap(find.text('Đặt hàng'));
+    await tester.pump();
+    expect(find.text('Vui lòng nhập tên của bạn'), findsOneWidget);
+    expect(Cart.instance.isEmpty, isFalse);
+  });
+
   testWidgets('success: tracks the order, empties the cart, closes', (
     tester,
   ) async {
     final sent = await openCart(tester, (r) async => echo(r));
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pumpAndSettle();
 
     expect(sent, hasLength(1));
@@ -121,7 +149,7 @@ void main() {
     expect(MyOrders.instance.ids, contains(id));
     expect(Cart.instance.isEmpty, isTrue);
     expect(find.byType(CartPage), findsNothing);
-    expect(find.text('Order placed, An!'), findsOneWidget);
+    expect(find.text('Đặt hàng thành công, An!'), findsOneWidget);
     expect(OrderRepository.instance.orders.map((o) => o.id), [id]);
   });
 
@@ -139,14 +167,14 @@ void main() {
     final sent = await openCart(tester, (r) async => echo(r));
     expect(find.text('Tiền mặt'), findsOneWidget);
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pumpAndSettle();
 
     final posted = body(sent.single);
     expect(posted['paymentMethod'], 'cash');
     expect(posted['status'], 'preparing');
     expect(posted.containsKey('paymentDueAt'), isFalse);
-    expect(find.text('Order placed, An!'), findsOneWidget);
+    expect(find.text('Đặt hàng thành công, An!'), findsOneWidget);
   });
 
   testWidgets(
@@ -167,7 +195,7 @@ void main() {
       });
       await chooseTransfer(tester);
 
-      await tester.tap(find.text('Place Order'));
+      await tester.tap(find.text('Đặt hàng'));
       // Not pumpAndSettle: the QR page's countdown timer keeps frames coming.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -207,7 +235,7 @@ void main() {
       expect(find.text('Chuyển khoản chưa được bật'), findsOneWidget);
       await tester.tap(find.text('Chuyển khoản'), warnIfMissed: false);
       await tester.pump();
-      await tester.tap(find.text('Place Order'));
+      await tester.tap(find.text('Đặt hàng'));
       await tester.pumpAndSettle();
 
       expect(body(sent.single)['paymentMethod'], 'cash');
@@ -225,13 +253,13 @@ void main() {
     );
     await chooseTransfer(tester);
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pumpAndSettle();
 
     expect(sent, hasLength(1));
     expect(find.byType(CartPage), findsOneWidget);
     expect(find.byType(PaymentQrPage), findsNothing);
-    expect(find.text("Couldn't place your order. Try again."), findsOneWidget);
+    expect(find.text('Không thể đặt hàng. Vui lòng thử lại.'), findsOneWidget);
     expect(Cart.instance.isEmpty, isFalse);
     expect(MyOrders.instance.ids, isEmpty);
   });
@@ -283,17 +311,17 @@ void main() {
     ) async {
       final sent = await openCart(tester, (_) => respond());
 
-      await tester.tap(find.text('Place Order'));
+      await tester.tap(find.text('Đặt hàng'));
       await tester.pumpAndSettle();
 
       expect(sent, hasLength(1));
       expect(find.byType(CartPage), findsOneWidget);
       // Above the button, so it is on screen without scrolling.
       expect(
-        find.text("Couldn't place your order. Try again."),
+        find.text('Không thể đặt hàng. Vui lòng thử lại.'),
         findsOneWidget,
       );
-      expect(find.text('Order placed, An!'), findsNothing);
+      expect(find.text('Đặt hàng thành công, An!'), findsNothing);
       expect(Cart.instance.lines.values.single, 1);
       expect(find.widgetWithText(TextField, 'An'), findsOneWidget);
       expect(MyOrders.instance.ids, isEmpty);
@@ -311,12 +339,12 @@ void main() {
     final answer = Completer<http.Response>();
     final sent = await openCart(tester, (_) => answer.future);
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pump();
 
     expect(tester.widget<FilledButton>(placeButton()).onPressed, isNull);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('Place Order'), findsNothing);
+    expect(find.text('Đặt hàng'), findsNothing);
     await tester.tap(placeButton(), warnIfMissed: false);
     await tester.pump();
     expect(sent, hasLength(1));
@@ -324,7 +352,7 @@ void main() {
 
     answer.complete(http.Response('Internal Server Error', 500));
     await tester.pumpAndSettle();
-    expect(find.text('Place Order'), findsOneWidget);
+    expect(find.text('Đặt hàng'), findsOneWidget);
     expect(tester.widget<FilledButton>(placeButton()).onPressed, isNotNull);
   });
 
@@ -337,11 +365,11 @@ void main() {
       return calls == 1 ? http.Response('bad', 400) : echo(r);
     });
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pumpAndSettle();
     expect(find.byType(CartPage), findsOneWidget);
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pumpAndSettle();
 
     expect(sent, hasLength(2));
@@ -374,9 +402,9 @@ void main() {
       MaterialApp(home: CartPage(paymentClient: paymentClient())),
     );
 
-    expect(find.text('25.000 VNĐ each'), findsOneWidget);
-    expect(find.text('4.000 VNĐ each'), findsOneWidget);
-    expect(find.text('Total: 54.000 VNĐ'), findsOneWidget);
+    expect(find.text('25.000 VNĐ / món'), findsOneWidget);
+    expect(find.text('4.000 VNĐ / món'), findsOneWidget);
+    expect(find.text('Tổng cộng: 54.000 VNĐ'), findsOneWidget);
     expect(find.textContaining(r'$'), findsNothing);
   });
 
@@ -390,7 +418,7 @@ void main() {
       return answer.future;
     });
 
-    await tester.tap(find.text('Place Order'));
+    await tester.tap(find.text('Đặt hàng'));
     await tester.pump();
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -452,14 +480,14 @@ void main() {
       await tester.pumpAndSettle();
       // No scrolling: the failure line is on screen right after the tap.
       final failure = tester.getRect(
-        find.text("Couldn't place your order. Try again."),
+        find.text('Không thể đặt hàng. Vui lòng thử lại.'),
       );
       expect(failure.top, greaterThanOrEqualTo(0));
       expect(failure.bottom, lessThanOrEqualTo(800));
 
       expect(tester.takeException(), isNull);
       expect(
-        find.text("Couldn't place your order. Try again."),
+        find.text('Không thể đặt hàng. Vui lòng thử lại.'),
         findsOneWidget,
       );
     });
@@ -515,12 +543,15 @@ void main() {
       await tester.enterText(find.byType(TextField), 'An');
       await tester.scrollUntilVisible(placeButton(), 100, scrollable: list);
       await tester.pumpAndSettle();
+      // The longer Vietnamese text can leave the button half below the fold.
+      await tester.ensureVisible(placeButton());
+      await tester.pumpAndSettle();
       await tester.tap(placeButton());
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
       final failure = tester.getRect(
-        find.text("Couldn't place your order. Try again."),
+        find.text('Không thể đặt hàng. Vui lòng thử lại.'),
       );
       expect(failure.top, greaterThanOrEqualTo(0));
       expect(failure.bottom, lessThanOrEqualTo(800));

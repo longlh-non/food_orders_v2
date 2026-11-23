@@ -36,6 +36,8 @@ class MenuItem {
   final String id;
   final String name;
   final String description;
+
+  /// VND, whole number (never cents).
   final double price;
   final MenuCategory category;
 
@@ -157,8 +159,9 @@ class MenuItem {
     );
   }
 
-  // Equal by id: `Cart` uses MenuItem as a Map key, and items parsed from
-  // the server are new objects on every fetch.
+  /// Equal by id, so a fresh MenuItem parsed from the server compares equal
+  /// to an older one with the same id (used as a Map key in tests;
+  /// `CartLine` has its own id-based equality for the cart).
   @override
   bool operator ==(Object other) => other is MenuItem && other.id == id;
 

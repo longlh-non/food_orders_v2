@@ -8,6 +8,9 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 import 'orders_export.dart';
+import 'orders_report.dart';
+import 'report_detail.dart';
+import 'report_summary.dart';
 import 'shop_settings.dart';
 import 'staff_gate.dart';
 import 'vietqr.dart';
@@ -17,9 +20,16 @@ import 'vietqr.dart';
 /// Orders live in the SQLite [Database] passed in (see `database.dart`), so
 /// they survive a restart. Tests pass an in-memory database per test.
 /// `bin/server.dart` creates exactly one instance.
+///
+/// Serves the order routes (list, create, change status), the payment routes
+/// (switch to cash, renew, confirm, QR, bank info), the staff month export
+/// and the live `/orders/stream`. Every change to an order is also sent to
+/// all stream clients. Lifecycle: [startExpirySweep] opens a timer and
+/// [close] stops it and closes the stream.
 class OrdersApi {
   /// [maxStoredOrders] is for tests; the server uses the default. Without a
-  /// [staffGate] the staff-only month export answers 403 (fail closed).
+  /// [staffGate] the staff-only routes (month export, staff switch to cash,
+  /// confirm payment) answer 403 (fail closed).
   /// Without [shopSettings] bank transfer counts as not set up (fail closed).
   /// [now] is the server clock used for `paymentDueAt`; tests inject one.
   OrdersApi(
@@ -38,7 +48,8 @@ class OrdersApi {
   /// The server's own clock (never the client's).
   final DateTime Function() _now;
 
-  /// Guards the staff-only routes (the month export).
+  /// Guards the staff-only routes (the month export, `staff-switch-to-cash`
+  /// and `confirm-payment`).
   final StaffGate _gate;
 
   /// New orders are refused (503) once this many are stored, so a flood of
@@ -53,11 +64,16 @@ class OrdersApi {
   final StreamController<Map<String, dynamic>> _events =
       StreamController.broadcast();
 
-  /// The shelf handler for all `/orders` routes, with CORS applied.
+  /// The shelf handler for the order and payment routes (`/orders...` and
+  /// `/payment-info`), with CORS applied. Built on first use.
   /// Request logging is left to the caller (`bin/server.dart`).
   late final Handler handler = _buildHandler();
 
+  /// The repeating expiry timer; null until [startExpirySweep] and after
+  /// [close].
   Timer? _sweepTimer;
+
+  /// Set by [close]; stops any sweep tick that is still pending.
   bool _closed = false;
 
   /// Starts the periodic expiry sweep (see [expireOverdue]). Safe to call
@@ -131,7 +147,8 @@ class OrdersApi {
     return true;
   }
 
-  /// Lazy check at the start of a payment route for one order.
+  /// Lazy check at the start of a payment route: cancels this one order if it
+  /// is an overdue `awaiting_payment` transfer order, like the sweep does.
   void _expireIfOverdue(String id) {
     final rows = _db.select(
       'SELECT payment_due_at FROM orders WHERE id = ? AND status = ? '
@@ -161,6 +178,8 @@ class OrdersApi {
         !_now().isAfter(due.add(renewWindow));
   }
 
+  /// A `bank_transfer` order still in `awaiting_payment`. The routes call
+  /// [_expireIfOverdue] first, so an overdue one is already cancelled.
   bool _isLiveAwaiting(Map<String, dynamic> o) =>
       o['status'] == statusAwaitingPayment &&
       o['paymentMethod'] == paymentBankTransfer;
@@ -185,6 +204,8 @@ class OrdersApi {
     return _publishIfChanged(id);
   }
 
+  /// After a conditional UPDATE: null when no row changed, otherwise sends
+  /// the updated order to the stream and returns it.
   Map<String, dynamic>? _publishIfChanged(String id) {
     if (_db.updatedRows == 0) return null;
     final updated = _findOrder(id)!;
@@ -192,11 +213,15 @@ class OrdersApi {
     return updated;
   }
 
+  /// The shared 409 reply of the payment routes (fixed text, no request data).
   Response _conflict() =>
       Response(409, body: 'The order is not in a state that allows this');
 
-  /// Shared body of the two switch routes. Nothing here awaits, so no other
-  /// request runs between the read and the write.
+  /// Shared body of the two switch routes: 200 the order now in cash and
+  /// `preparing`, 404 unknown id, 409 not allowed. A live `awaiting_payment`
+  /// order always qualifies; an expired one only for [staff] (no time limit)
+  /// or, for the customer, inside the renew window. Nothing here awaits, so no
+  /// other request runs between the read and the write.
   Response _switchRoute(String id, {required bool staff}) {
     _expireIfOverdue(id);
     final order = _findOrder(id);
@@ -209,13 +234,20 @@ class OrdersApi {
     return updated == null ? _conflict() : _json(updated);
   }
 
+  /// Creates the router with every route below and wraps it with CORS.
+  /// Routes are registered here, in the order they are matched.
   Handler _buildHandler() {
     final router = Router();
 
-    // Staff only: one month of orders as a CSV file for Excel. The staff ID
-    // and password are checked first, then the month, and only then is anything read. Reads
-    // only; the file holds customer names, so it is never cached and its
-    // content never logged.
+    // GET /orders/export (staff only): one month of orders as a CSV file for
+    // Excel, or with `report=summary|detail` an xlsx report of the delivered
+    // orders. Checked in this order: staff ID and password (403 staff routes
+    // disabled, 401 wrong, 429 locked), `month` = YYYY-MM (400), `report`
+    // (400 for anything but absent, `summary` or `detail`; the old `format`
+    // parameter is refused too), the summary report being set up (503), and
+    // only then is anything read. A stored order that can't be read gives 500
+    // with a fixed message. 200 = the file. Reads only; the file holds
+    // customer names, so it is never cached and its content never logged.
     router.get('/orders/export', (Request req) {
       final denied = _gate.check(req);
       if (denied != null) return denied;
@@ -231,6 +263,33 @@ class OrdersApi {
       }
       if (month == null || !isValidMonth(month)) {
         return Response.badRequest(body: 'month must be YYYY-MM');
+      }
+
+      // `report`: absent = the CSV; `summary` / `detail` = an xlsx report.
+      // Anything else (empty, repeated, other names) is refused.
+      final String? report;
+      try {
+        // The first draft of this route used `format=xlsx`; it is refused,
+        // not silently answered with a CSV.
+        if (req.url.queryParametersAll.containsKey('format')) {
+          return Response.badRequest(body: 'report must be summary or detail');
+        }
+        final all = req.url.queryParametersAll['report'];
+        if (all == null) {
+          report = null;
+        } else if (all.length == 1 &&
+            (all.first == 'summary' || all.first == 'detail')) {
+          report = all.first;
+        } else {
+          return Response.badRequest(body: 'report must be summary or detail');
+        }
+      } on ArgumentError {
+        return Response.badRequest(body: 'report must be summary or detail');
+      } on FormatException {
+        return Response.badRequest(body: 'report must be summary or detail');
+      }
+      if (report == 'summary' && !_settings.reportEnabled) {
+        return Response(503, body: 'The summary report is not set up');
       }
 
       // Only this month's rows; `placed_at` starts with "YYYY-MM-".
@@ -250,6 +309,41 @@ class OrdersApi {
           return _exportFailed(row['id']);
         }
       }
+      if (report != null) {
+        final delivered = <ReportOrder>[];
+        for (final order in ordersInMonth(orders, month)) {
+          try {
+            delivered.addAll(deliveredOrders([order], month));
+          } on TypeError {
+            return _exportFailed(order['id']);
+          }
+        }
+        final List<int> bytes;
+        final String fileName;
+        if (report == 'summary') {
+          bytes = buildSummaryReport(
+            shop: _settings,
+            month: month,
+            days: dailyTotals(delivered, month),
+          );
+          fileName = 'bao-cao-tong-hop-$month.xlsx';
+        } else {
+          bytes = buildDetailReport(
+            month: month,
+            days: daysWithOrders(delivered, month),
+          );
+          fileName = 'chi-tiet-$month.xlsx';
+        }
+        return Response.ok(
+          bytes,
+          headers: {
+            'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            // Fixed prefix plus the validated month: plain ASCII.
+            'content-disposition': 'attachment; filename="$fileName"',
+            'cache-control': 'no-store',
+          },
+        );
+      }
       for (final order in ordersInMonth(orders, month)) {
         try {
           lines.addAll(exportRows([order]));
@@ -268,8 +362,8 @@ class OrdersApi {
       );
     });
 
-    // Newest first = most recently inserted first. `rowid` grows with every
-    // insert; `placed_at` is client-supplied, so it isn't used for ordering.
+    // GET /orders: 200 with the newest orders first. Newest first = most
+    // recently inserted first. `rowid` grows with every insert; `placed_at` is client-supplied, so it isn't used for ordering.
     // Only the newest [maxOrdersReturned]: the response stays small however
     // many orders pile up.
     router.get('/orders', (Request req) {
@@ -280,6 +374,11 @@ class OrdersApi {
       return _json(rows.map(_orderFromRow).toList());
     });
 
+    // POST /orders: place a new order. Answers 200 with the stored order
+    // (including `paymentMethod` and `paymentDueAt`), 400 for a body that is
+    // not a JSON object or breaks the rules in [_orderProblem], 503 for a
+    // bank transfer while bank details aren't set up, 409 for a duplicate id,
+    // 503 when [maxStoredOrders] are stored. The order is sent to the stream.
     // The client still assigns the id (a millisecond timestamp). We only
     // refuse duplicates; generating ids server-side is a later contract change.
     router.post('/orders', (Request req) async {
@@ -319,6 +418,10 @@ class OrdersApi {
       return _json(stored);
     });
 
+    // PATCH /orders/{id}: change the status. Answers 200 with the updated
+    // order, 400 when `status` is missing or not a known status (or the body
+    // is not a JSON object), 404 unknown id, 409 "Use the payment routes".
+    // The order is sent to the stream.
     // Only `status` can change after an order is placed. Any other field in
     // the body is ignored, so a client can't rewrite items, prices, or ids.
     router.patch('/orders/<id>', (Request req, String id) async {
@@ -357,19 +460,27 @@ class OrdersApi {
       return _json(order);
     });
 
-    // Customer: switch an unpaid (or just expired) transfer order to cash.
+    // POST /orders/{id}/switch-to-cash (customer, no staff ID): switch an
+    // unpaid, or expired within 15 minutes of its deadline, transfer order to
+    // cash. 200 the order, 404 unknown id, 409 any other state.
     router.post('/orders/<id>/switch-to-cash', (Request req, String id) {
       return _switchRoute(id, staff: false);
     });
 
-    // Staff only, checked before any lookup. No time limit.
+    // POST /orders/{id}/staff-switch-to-cash (staff only): like the customer
+    // switch but an expired order has no time limit. 200, 401 / 403 / 429
+    // from the staff check (made before any lookup), 404, 409.
     router.post('/orders/<id>/staff-switch-to-cash', (Request req, String id) {
       final denied = _gate.check(req);
       if (denied != null) return denied;
       return _switchRoute(id, staff: true);
     });
 
-    // Customer: ask for a fresh QR for an order that just expired.
+    // POST /orders/{id}/renew-payment (customer, no staff ID): a fresh
+    // 5-minute deadline for an order that expired within the last 15 minutes;
+    // it goes back to `awaiting_payment` and stays a transfer order. 200 the
+    // order, 404, 409 not renewable (or someone else changed it first), 503
+    // bank transfer not set up.
     router.post('/orders/<id>/renew-payment', (Request req, String id) {
       _expireIfOverdue(id);
       final order = _findOrder(id);
@@ -394,7 +505,10 @@ class OrdersApi {
       return updated == null ? _conflict() : _json(updated);
     });
 
-    // Staff only: the money arrived. A cancelled (expired) order is refused.
+    // POST /orders/{id}/confirm-payment (staff only): the money arrived, so a
+    // live `awaiting_payment` transfer order becomes `preparing` and loses its
+    // deadline. 200 the order, 401 / 403 / 429 from the staff check, 404, 409
+    // otherwise. A cancelled (expired) order is refused.
     router.post('/orders/<id>/confirm-payment', (Request req, String id) {
       final denied = _gate.check(req);
       if (denied != null) return denied;
@@ -417,8 +531,9 @@ class OrdersApi {
       return updated == null ? _conflict() : _json(updated);
     });
 
-    // Public: is bank transfer set up, and which account to show next to the
-    // QR. Values come from ShopSettings only; nothing from the request.
+    // GET /payment-info (public): 200 with whether bank transfer is set up
+    // and, when it is, which account to show next to the QR. Never cached.
+    // Values come from ShopSettings only; nothing from the request.
     router.get('/payment-info', (Request req) {
       final s = _settings;
       return _noStoreJson({
@@ -431,7 +546,12 @@ class OrdersApi {
       });
     });
 
-    // Public: the QR text for a live transfer order. The amount is computed
+    // GET /orders/{id}/payment-qr (public): the QR text for a live transfer
+    // order. 200 `{payload, amount, reference, dueAt, bank details}` (never
+    // cached), 404 unknown id, 409 not payable (not a live `awaiting_payment`
+    // transfer order, past its deadline, or a total that isn't whole VND
+    // above 0), 503 bank transfer not set up, 500 a stored order is
+    // malformed. The amount is computed
     // from the stored items only, so it equals what the restaurant sees (also
     // after a renewal); the request carries nothing but the id.
     router.get('/orders/<id>/payment-qr', (Request req, String id) {
@@ -483,6 +603,10 @@ class OrdersApi {
       });
     });
 
+    // GET /orders/stream: 200 `text/event-stream`, one `data:` line with an
+    // Order JSON per change, first a `: connected` line, then a ping line
+    // every 30 seconds.
+    //
     // SSE via request.hijack:
     //
     // The obvious approach — `Response.ok(controller.stream, headers: ...)` —
@@ -548,6 +672,8 @@ class OrdersApi {
     ).toIso8601String();
   }
 
+  /// One order in the `Order.toJson()` shape, or null for an unknown id.
+  /// Throws if the stored row is malformed (e.g. broken `items_json`).
   Map<String, dynamic>? _findOrder(String id) {
     final rows = _db.select('SELECT * FROM orders WHERE id = ?', [id]);
     return rows.isEmpty ? null : _orderFromRow(rows.first);
@@ -610,7 +736,10 @@ const orderStatuses = {
   statusCancelled,
 };
 
+/// The status of an unpaid bank transfer order; it exists only through POST.
 const statusAwaitingPayment = 'awaiting_payment';
+
+/// The status staff cancel to, and the expiry sweep sets.
 const statusCancelled = 'cancelled';
 
 /// Valid `paymentMethod` values.
@@ -628,6 +757,8 @@ const renewWindow = Duration(minutes: 15);
 /// How often the server cancels overdue transfer orders.
 const expirySweepInterval = Duration(seconds: 15);
 
+// The exact keys allowed in a POSTed order, order line and topping. Any other
+// key is refused by [_hasKeys], so a client can never send `paymentDueAt`.
 const _orderRequired = {'id', 'customerName', 'items', 'status', 'placedAt'};
 const _orderOptional = {'paymentMethod'};
 const _itemRequired = {'name', 'quantity', 'price'};
@@ -663,7 +794,11 @@ const maxQuantity = 100;
 /// prices). Keeps `quantity × price` far from overflow.
 const maxPrice = 1000000;
 
-/// Checks that [order] has exactly the shape of `Order.toJson()`.
+/// Checks that [order] has exactly the shape of `Order.toJson()` (plus the
+/// optional `paymentMethod`) and obeys the limits above: id, name, status,
+/// payment method, `placedAt`, line count, quantity and prices. Also that the
+/// method and status agree (`cash` needs `preparing`; `bank_transfer` needs
+/// `awaiting_payment` and a total above 0).
 /// Returns a short message naming the first problem, or null if valid.
 /// Messages are fixed strings — request data is never echoed back.
 String? _orderProblem(Map<String, dynamic> order) {
@@ -812,6 +947,7 @@ bool _hasKeys(
 /// require the `YYYY-MM-DDT` start that `DateTime.toIso8601String()` emits.
 final _isoDateTimeStart = RegExp(r'^\d{4}-\d{2}-\d{2}T');
 
+/// The 400 reply when the body is not a JSON object.
 Response _badRequest() =>
     Response.badRequest(body: 'Request body must be a JSON object');
 

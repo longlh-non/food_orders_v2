@@ -12,6 +12,11 @@ import 'package:food_orders_backend/staff_gate.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 
+/// Starts the backend: opens the database and the images folder, builds the
+/// staff gate and the shop settings, combines the menu, images and orders
+/// APIs behind logging and the no-sniff header, listens on port 3000 and
+/// prints a few startup lines (never the staff ID or password). Ctrl-C closes
+/// everything and exits.
 void main() async {
   // Default: backend/data/orders.db, found relative to this script so it
   // doesn't depend on the directory you run from. That default assumes

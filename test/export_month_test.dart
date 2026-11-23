@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:food_orders/restaurant/api/export_client.dart';
@@ -13,8 +15,8 @@ const staffId = 'test-staff';
 const token = 'test-password-1234';
 const creds = StaffCredentials(id: staffId, password: token);
 
-Finder idField() => find.widgetWithText(TextField, 'Staff ID');
-Finder passwordField() => find.widgetWithText(TextField, 'Staff password');
+Finder idField() => find.widgetWithText(TextField, 'Mã nhân viên');
+Finder passwordField() => find.widgetWithText(TextField, 'Mật khẩu nhân viên');
 
 /// Types the test staff ID and password into the dialog.
 Future<void> typeCreds(WidgetTester tester) async {
@@ -59,6 +61,27 @@ void main() {
       expect(r.url.toString(), isNot(contains(token)));
     });
 
+    for (final (report, query) in [
+      (ExportReport.lines, {'month': '2026-11'}),
+      (ExportReport.summary, {'month': '2026-11', 'report': 'summary'}),
+      (ExportReport.detail, {'month': '2026-11', 'report': 'detail'}),
+    ]) {
+      test(
+        '${report.name}: exact path and query, staff headers only',
+        () async {
+          final api = answering(() async => http.Response.bytes(csv, 200));
+          await api.fetchMonth('2026-11', report: report, credentials: creds);
+          final r = sent.single;
+          expect(r.url.path, '/api/orders/export');
+          expect(r.url.queryParameters, query);
+          expect(r.headers['X-Staff-Id'], staffId);
+          expect(r.headers['X-Staff-Password'], token);
+          expect(r.url.toString(), isNot(contains(token)));
+          expect(r.url.toString(), isNot(contains(staffId)));
+        },
+      );
+    }
+
     test('a month that is not YYYY-MM is refused without sending', () {
       final api = answering(() async => http.Response.bytes(csv, 200));
       for (final bad in ['2026-13', '2026-1', '../x', '']) {
@@ -74,6 +97,7 @@ void main() {
       (401, ExportFailure.wrongCredentials),
       (429, ExportFailure.tooManyTries),
       (403, ExportFailure.disabled),
+      (503, ExportFailure.notConfigured),
       (400, ExportFailure.other),
       (500, ExportFailure.other),
     ]) {
@@ -193,7 +217,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    Finder downloadButton() => find.widgetWithText(FilledButton, 'Download');
+    /// Opens the "Loại báo cáo" dropdown and picks [label].
+    Future<void> pickReport(WidgetTester tester, String label) async {
+      await tester.tap(find.text('Báo cáo tổng hợp theo ngày (Excel)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label).last);
+      await tester.pumpAndSettle();
+    }
+
+    Finder downloadButton() => find.widgetWithText(FilledButton, 'Tải xuống');
 
     testWidgets('12 months, newest first, current month selected', (
       tester,
@@ -240,12 +272,13 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('2026-09').last);
       await tester.pumpAndSettle();
+      await pickReport(tester, 'Danh sách dòng món (CSV)');
       await typeCreds(tester);
       await tester.pump();
       await tester.tap(downloadButton());
       await tester.pumpAndSettle();
 
-      expect(requests.single.url.queryParameters['month'], '2026-09');
+      expect(requests.single.url.queryParameters, {'month': '2026-09'});
       expect(saved.single.$1, csv);
       expect(saved.single.$2, 'orders-2026-09.csv');
       expect(saved.single.$3, startsWith('text/csv'));
@@ -262,10 +295,119 @@ void main() {
       );
     });
 
+    testWidgets('the report choice defaults to the summary', (tester) async {
+      await openDialog(tester, (_) async => http.Response.bytes(csv, 200));
+      expect(find.text('Loại báo cáo'), findsOneWidget);
+      expect(find.text('Báo cáo tổng hợp theo ngày (Excel)'), findsOneWidget);
+      await typeCreds(tester);
+      await tester.pump();
+      await tester.tap(downloadButton());
+      await tester.pumpAndSettle();
+      expect(requests.single.url.queryParameters['report'], 'summary');
+      expect(saved.single.$2, 'bao-cao-tong-hop-2026-11.xlsx');
+    });
+
+    for (final (label, report, name, mime) in [
+      (
+        'Báo cáo tổng hợp theo ngày (Excel)',
+        'summary',
+        'bao-cao-tong-hop-2026-11.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ),
+      (
+        'Chi tiết từng đơn trong tháng (Excel)',
+        'detail',
+        'chi-tiet-2026-11.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ),
+      (
+        'Danh sách dòng món (CSV)',
+        null,
+        'orders-2026-11.csv',
+        'text/csv;charset=utf-8',
+      ),
+    ]) {
+      testWidgets('choice "$label" downloads once as $name', (tester) async {
+        await openDialog(tester, (_) async => http.Response.bytes(csv, 200));
+        await pickReport(tester, label);
+        await typeCreds(tester);
+        await tester.pump();
+        await tester.tap(downloadButton());
+        await tester.pumpAndSettle();
+
+        expect(requests, hasLength(1));
+        expect(requests.single.url.queryParameters['report'], report);
+        expect(saved, hasLength(1));
+        expect(saved.single.$2, name);
+        expect(saved.single.$3, mime);
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+    }
+
+    testWidgets('503 shows the fixed text, stays open and usable', (
+      tester,
+    ) async {
+      await openDialog(tester, (_) async => http.Response('x', 503));
+      await typeCreds(tester);
+      await tester.pump();
+      await tester.tap(downloadButton());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Chưa cài đặt thông tin quán trên máy chủ'),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(saved, isEmpty);
+      expect(
+        tester.widget<FilledButton>(downloadButton()).onPressed,
+        isNotNull,
+      );
+      // The CSV needs no shop settings; it can be chosen next.
+      expect(
+        tester
+            .widget<DropdownButtonFormField<ExportReport>>(
+              find.byType(DropdownButtonFormField<ExportReport>),
+            )
+            .onChanged,
+        isNotNull,
+      );
+    });
+
+    testWidgets('both dropdowns are disabled while downloading', (
+      tester,
+    ) async {
+      final gate = Completer<http.Response>();
+      await openDialog(tester, (_) => gate.future);
+      await typeCreds(tester);
+      await tester.pump();
+      await tester.tap(downloadButton());
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<DropdownButtonFormField<ExportReport>>(
+              find.byType(DropdownButtonFormField<ExportReport>),
+            )
+            .onChanged,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byType(DropdownButtonFormField<String>),
+            )
+            .onChanged,
+        isNull,
+      );
+      gate.complete(http.Response.bytes(csv, 200));
+      await tester.pumpAndSettle();
+    });
+
     for (final (status, message) in [
-      (403, 'Export is turned off on the server'),
-      (500, "Couldn't export. Try again."),
-      (400, "Couldn't export. Try again."),
+      (403, 'Chức năng xuất dữ liệu đang tắt trên máy chủ'),
+      (500, 'Không thể xuất dữ liệu. Thử lại.'),
+      (400, 'Không thể xuất dữ liệu. Thử lại.'),
     ]) {
       testWidgets('$status shows "$message" and stays open', (tester) async {
         await openDialog(tester, (_) async => http.Response('x', status));
@@ -280,7 +422,7 @@ void main() {
       });
     }
 
-    testWidgets('401 shows "Wrong staff ID or password" and forgets both', (
+    testWidgets('401 shows "Sai mã nhân viên hoặc mật khẩu" and forgets both', (
       tester,
     ) async {
       StaffCredentialsHolder.instance.value = const StaffCredentials(
@@ -295,7 +437,7 @@ void main() {
       await tester.tap(downloadButton());
       await tester.pumpAndSettle();
 
-      expect(find.text('Wrong staff ID or password'), findsOneWidget);
+      expect(find.text('Sai mã nhân viên hoặc mật khẩu'), findsOneWidget);
       expect(StaffCredentialsHolder.instance.value, isNull);
       expect(text(idField()), isEmpty);
       expect(text(passwordField()), isEmpty);
@@ -315,7 +457,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Too many wrong tries. Try again in 37 seconds.'),
+        find.text('Thử sai quá nhiều lần. Thử lại sau 37 giây.'),
         findsOneWidget,
       );
       expect(find.byType(AlertDialog), findsOneWidget);
@@ -332,7 +474,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Use plain letters, digits and symbols, no accents'),
+        find.text('Chỉ dùng chữ không dấu, số và ký hiệu thông thường'),
         findsOneWidget,
       );
       expect(requests, isEmpty);
@@ -348,7 +490,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Too many wrong tries. Try again later.'),
+        find.text('Thử sai quá nhiều lần. Vui lòng thử lại sau.'),
         findsOneWidget,
       );
     });
@@ -370,7 +512,7 @@ void main() {
           for (final t in tester.widgetList<RichText>(find.byType(RichText)))
             t.text.toPlainText(),
         ].join(' ');
-        expect(shown, contains('Download'));
+        expect(shown, contains('Tải xuống'));
         expect(shown, isNot(contains(token)));
         expect(shown, isNot(contains(staffId)));
       });
@@ -380,7 +522,7 @@ void main() {
       await openDialog(tester, (_) async => http.Response.bytes(csv, 200));
       await typeCreds(tester);
       await tester.pump();
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.text('Hủy'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
 
@@ -425,14 +567,14 @@ void main() {
       await tester.tap(downloadButton());
       await tester.pumpAndSettle();
 
-      expect(find.text("Couldn't export. Try again."), findsOneWidget);
+      expect(find.text('Không thể xuất dữ liệu. Thử lại.'), findsOneWidget);
       expect(
         tester.widget<FilledButton>(downloadButton()).onPressed,
         isNotNull,
       );
       expect(
         tester
-            .widget<TextButton>(find.widgetWithText(TextButton, 'Cancel'))
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Hủy'))
             .onPressed,
         isNotNull,
       );
@@ -468,7 +610,10 @@ void main() {
         await tester.tap(downloadButton());
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.text('Export is turned off on the server'), findsOneWidget);
+        expect(
+          find.text('Chức năng xuất dữ liệu đang tắt trên máy chủ'),
+          findsOneWidget,
+        );
       });
     }
   });
@@ -479,11 +624,14 @@ void main() {
     OrderRepository.instance.setOrdersForTest(const []);
     await tester.pumpWidget(const MaterialApp(home: OrdersPage()));
 
-    await tester.tap(find.byTooltip('Export month'));
+    await tester.tap(find.byTooltip('Xuất đơn hàng theo tháng'));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(AlertDialog, 'Export month'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(
+      find.widgetWithText(AlertDialog, 'Xuất đơn hàng theo tháng'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Hủy'));
     await tester.pumpAndSettle();
   });
 }

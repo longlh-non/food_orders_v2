@@ -26,7 +26,10 @@ class CartPage extends StatefulWidget {
   State<CartPage> createState() => _CartPageState();
 }
 
+/// State for [CartPage]: the name field, the chosen payment method, and the
+/// sending / failed flags that drive the button and the error line.
 class _CartPageState extends State<CartPage> {
+  /// Holds the customer's name; released in [dispose].
   final _nameController = TextEditingController();
 
   /// True while an order is on its way to the server: the button is
@@ -51,12 +54,15 @@ class _CartPageState extends State<CartPage> {
   /// On the failure line, so it can be scrolled into view after a failure.
   final _failureKey = GlobalKey();
 
+  /// Starts the "is bank transfer set up?" check as soon as the page opens.
   @override
   void initState() {
     super.initState();
     _checkTransfer();
   }
 
+  /// Asks the server (network call) whether bank transfer is set up, then
+  /// redraws. Any failure counts as "not set up", which falls back to cash.
   Future<void> _checkTransfer() async {
     var enabled = false;
     try {
@@ -72,6 +78,8 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
+  /// Releases the name controller and, if the page made its own
+  /// [PaymentClient], closes it so no HTTP client is left open.
   @override
   void dispose() {
     _ownClient?.close();
@@ -79,13 +87,18 @@ class _CartPageState extends State<CartPage> {
     super.dispose();
   }
 
+  /// Checks the name, builds the order and sends it to the server, then waits
+  /// for the answer. On failure it keeps the cart and shows an error line.
+  /// On success it tracks the id in [MyOrders] and empties the cart. A
+  /// transfer order then replaces this page with the payment QR page; a cash
+  /// order shows a thank-you SnackBar and closes the page.
   Future<void> _placeOrder() async {
     final cart = Cart.instance;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter your name')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập tên của bạn')),
+      );
       return;
     }
     if (cart.isEmpty) return;
@@ -127,7 +140,7 @@ class _CartPageState extends State<CartPage> {
     }
 
     // Accepted. Track it only now, so a failed order never shows up in the
-    // "Your orders" banner. This happens even if the customer left the page
+    // "Đơn của bạn" banner. This happens even if the customer left the page
     // meanwhile: the order exists either way.
     MyOrders.instance.track(order.id);
     cart.clear();
@@ -144,21 +157,24 @@ class _CartPageState extends State<CartPage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Order placed, ${order.customerName}!')),
+      SnackBar(content: Text('Đặt hàng thành công, ${order.customerName}!')),
     );
     Navigator.of(context).pop();
   }
 
+  /// The cart screen: one card per line with minus and plus buttons, then the
+  /// name field, payment choice, total and order button. The list rebuilds
+  /// when the cart changes (`ListenableBuilder`); an empty cart shows a note.
   @override
   Widget build(BuildContext context) {
     final cart = Cart.instance;
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Cart')),
+      appBar: AppBar(title: const Text('Giỏ hàng của bạn')),
       body: ListenableBuilder(
         listenable: cart,
         builder: (context, _) {
           if (cart.isEmpty) {
-            return const Center(child: Text('Your cart is empty.'));
+            return const Center(child: Text('Giỏ hàng trống.'));
           }
           // One scrollable list for everything (lines, name, total, button,
           // failure text), so nothing can overflow at large text sizes. The
@@ -178,7 +194,7 @@ class _CartPageState extends State<CartPage> {
                           Text(
                             line.toppings.map((t) => '+ ${t.name}').join('   '),
                           ),
-                        Text('${formatVnd(line.unitPrice)} each'),
+                        Text('${formatVnd(line.unitPrice)} / món'),
                       ],
                     ),
                     trailing: Row(
@@ -202,7 +218,7 @@ class _CartPageState extends State<CartPage> {
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Your name',
+                  labelText: 'Tên của bạn',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -210,9 +226,9 @@ class _CartPageState extends State<CartPage> {
               _paymentChoice(),
               const SizedBox(height: 12),
               // Total above a full-width button (not side by side): at large
-              // text "Place Order" alone is wider than a phone.
+              // text "Đặt hàng" alone is wider than a phone.
               Text(
-                'Total: ${formatVnd(cart.total)}',
+                'Tổng cộng: ${formatVnd(cart.total)}',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -225,7 +241,7 @@ class _CartPageState extends State<CartPage> {
                     key: _failureKey,
                     liveRegion: true,
                     child: Text(
-                      "Couldn't place your order. Try again.",
+                      'Không thể đặt hàng. Vui lòng thử lại.',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
@@ -239,7 +255,7 @@ class _CartPageState extends State<CartPage> {
                         dimension: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Place Order'),
+                    : const Text('Đặt hàng'),
               ),
             ],
           );
