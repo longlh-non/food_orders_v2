@@ -1,0 +1,18 @@
+# Keep customer data, secrets and local build output out of the build context.
+# data/ holds orders.db (customer names) and images; it must never enter an image layer.
+# The **/ patterns match in any folder, not only at the context root.
+**/data/
+**/*.db
+**/*.db-*
+**/images/
+.env*
+**/.env*
+**/*.pem
+**/*.key
+.dart_tool/
+build/
+.git
+.gitignore
+.dockerignore
+Dockerfile
+test/
