@@ -174,10 +174,10 @@ Staff can add a dish or drink without `sqlite3`. It needs the staff ID and passw
 
 **The item's id.** The server makes it from the name: lower case, accents removed, `đ` becomes `d`, other characters become `-`, at most 48 characters. "Xôi gà" becomes `xoi-ga`. If that id is taken, it becomes `xoi-ga-2`, then `xoi-ga-3`. The id **never changes** afterwards, even if the name is edited with `sqlite3`; keep it stable (see "Keep ids stable" in `CLAUDE.md` → "Editing the menu").
 
-**If it fails** (the form reopens with what you typed and an error at the top):
+**If it fails** (except a wrong password, below, the form reopens with what you typed and an error at the top):
 - **"Đã có món trùng tên trong mục này":** an item with the same name is already in that category (capitals and accents don't matter). Use another name or category.
 - **"Thực đơn đã đầy, không thêm được món nữa":** the menu holds 300 items, the maximum. Remove an item with `sqlite3` first.
-- **Wrong staff ID or password (401):** retype them. **After 5 wrong tries within 60 seconds** every staff request is refused for 60 seconds (section 4).
+- **Wrong staff ID or password (401):** the staff login box opens again with an error (the form is not reopened); retype them. **After 5 wrong tries within 60 seconds** every staff request is refused for 60 seconds (section 4).
 - **Editing disabled (403):** the backend was started without a valid `STAFF_ID` and `STAFF_PASSWORD` (section 4).
 - **Name, description or picture-name errors:** the message under the field says the limit.
 
