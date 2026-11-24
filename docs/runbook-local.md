@@ -118,7 +118,7 @@ sqlite3 backend/data/orders.db ".backup backend/data/orders.$(date +%F-%H%M).db"
 
 **Editing the menu and pictures:**
 - Use the `sqlite3` CLI (install once: `sudo apt install sqlite3`). The examples (change a price, add an item, Ăn vặt, toppings, pictures, sold out) are in `CLAUDE.md` → "Editing the menu".
-- Staff can also change a price or sold-out over HTTP with the staff ID and password (section 4).
+- Staff can also change a price or sold-out over HTTP with the staff ID and password (section 4), and **add** an item from the restaurant app (section 3a).
 - To add a picture:
   1. copy the file into `backend/data/images/`. Name rules: lowercase letters, digits and `-`, starting with a letter or digit, up to 64 characters before the extension, then `.jpg`, `.jpeg`, `.png` or `.webp`. The file is at most 1 MiB (the full rule is in `CLAUDE.md` → "Editing the menu");
   2. set it with `sqlite3`;
@@ -156,9 +156,42 @@ sqlite3 backend/data/orders.db ".backup backend/data/orders.$(date +%F-%H%M).db"
 
 ---
 
+## 3a. Add a menu item from the restaurant app
+
+Staff can add a dish or drink without `sqlite3`. It needs the staff ID and password (section 4); without them the backend answers 403 and the app says "Chức năng sửa thực đơn đang tắt trên máy chủ".
+
+1. **If the item has a picture,** first copy the file into `backend/data/images/` (see "To add a picture" in section 3). Name rule: lowercase letters, digits and `-`, then `.webp`, `.jpg`, `.jpeg` or `.png`; for example `xoi-ga.webp`. Skip this for an item without a picture.
+2. Open `http://restaurant.local`, press the menu-edit button in the top bar ("Chỉnh sửa thực đơn"), then the add button at the top right ("Thêm món"). The add button appears once the menu has loaded.
+3. Type the staff ID and password when asked. The app keeps them only until the page is reloaded.
+4. Fill in the form ("Thêm món mới"):
+   - **Tên món** (name): required, up to 100 characters;
+   - **Mô tả** (description): optional, up to 500 characters;
+   - the price in VND, a whole number from 0 to 1,000,000;
+   - **Mục** (category): Đồ ăn, Ăn nhẹ, Đồ uống or Ăn vặt. You must choose one;
+   - **Cho phép thêm topping**: shown only for Đồ ăn;
+   - **Tên tệp ảnh** (picture file name): optional. Type the same name as the file from step 1. The app does **not** check that the file exists: an unknown name just shows the placeholder, so open `http://customer.local/api/images/<name>` to check it.
+5. Press "Thêm". A message "Đã thêm: …" appears and the item is available at once. Open `http://customer.local` (reload if it was open) and look under its category.
+
+**The item's id.** The server makes it from the name: lower case, accents removed, `đ` becomes `d`, other characters become `-`, at most 48 characters. "Xôi gà" becomes `xoi-ga`. If that id is taken, it becomes `xoi-ga-2`, then `xoi-ga-3`. The id **never changes** afterwards, even if the name is edited with `sqlite3`; keep it stable (see "Keep ids stable" in `CLAUDE.md` → "Editing the menu").
+
+**If it fails** (the form reopens with what you typed and an error at the top):
+- **"Đã có món trùng tên trong mục này":** an item with the same name is already in that category (capitals and accents don't matter). Use another name or category.
+- **"Thực đơn đã đầy, không thêm được món nữa":** the menu holds 300 items, the maximum. Remove an item with `sqlite3` first.
+- **Wrong staff ID or password (401):** retype them. **After 5 wrong tries within 60 seconds** every staff request is refused for 60 seconds (section 4).
+- **Editing disabled (403):** the backend was started without a valid `STAFF_ID` and `STAFF_PASSWORD` (section 4).
+- **Name, description or picture-name errors:** the message under the field says the limit.
+
+**What the app can't do yet:** rename an item, delete it, or change the description, category or picture of an existing item. These still need `sqlite3`: the commands are in `CLAUDE.md` → "Editing the menu". The app changes only the price and sold-out switch of existing items.
+
+**Before bigger menu edits,** make a dated backup of `orders.db` (and the images folder), as in section 3. A single add is easy to undo with `sqlite3` (`DELETE FROM menu_items WHERE id = '...'`), but a backup is cheap.
+
+**Unverified (owner acceptance):** that these steps work end to end in your browser against the real backend; agents have not clicked through them.
+
+---
+
 ## 4. Staff ID and password
 
-Staff-only routes need one shared staff ID and password, set when the backend starts. Today they are the month export (the restaurant app's download button, "Xuất đơn hàng theo tháng", `GET /api/orders/export`), changing a price or sold-out (`PATCH /api/menu/<id>`), and the two staff payment buttons in the restaurant app ("Đã nhận chuyển khoản" and "Chuyển sang tiền mặt").
+Staff-only routes need one shared staff ID and password, set when the backend starts. Today they are the month export (the restaurant app's download button, "Xuất đơn hàng theo tháng", `GET /api/orders/export`), changing a price or sold-out (`PATCH /api/menu/<id>`), adding a menu item (`POST /api/menu`, section 3a), and the two staff payment buttons in the restaurant app ("Đã nhận chuyển khoản" and "Chuyển sang tiền mặt").
 
 **What changed for you:** the old `STAFF_TOKEN` is no longer used. Start the backend with `STAFF_ID` and `STAFF_PASSWORD`, otherwise the export, menu edits and the staff payment buttons stay off (403).
 
