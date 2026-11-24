@@ -459,4 +459,58 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'QR-Code für die Überweisung';
+
+  @override
+  String get menuAddTooltip => 'Gericht hinzufügen';
+
+  @override
+  String get menuAddTitle => 'Neues Gericht hinzufügen';
+
+  @override
+  String get menuAddAction => 'Hinzufügen';
+
+  @override
+  String get menuAddNameLabel => 'Name';
+
+  @override
+  String get menuAddDescriptionLabel => 'Beschreibung (optional)';
+
+  @override
+  String get menuAddCategoryLabel => 'Kategorie';
+
+  @override
+  String get menuAddCategoryRequired => 'Bitte eine Kategorie wählen';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'Toppings erlauben';
+
+  @override
+  String get menuAddImageLabel => 'Name der Bilddatei (optional)';
+
+  @override
+  String get menuAddImageHelp =>
+      'Die Datei muss bereits im Bilderordner auf dem Server liegen.';
+
+  @override
+  String get menuAddNameError => 'Namen eingeben, höchstens 100 Zeichen';
+
+  @override
+  String get menuAddDescriptionError => 'Beschreibung: höchstens 500 Zeichen';
+
+  @override
+  String get menuAddImageError =>
+      'Ungültiger Dateiname. Nur Kleinbuchstaben, Ziffern und -, Endung .jpg, .jpeg, .png oder .webp';
+
+  @override
+  String get menuAddDuplicate =>
+      'In dieser Kategorie gibt es schon ein Gericht mit diesem Namen';
+
+  @override
+  String get menuFull =>
+      'Die Speisekarte ist voll, es können keine Gerichte mehr hinzugefügt werden';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'Hinzugefügt: $name';
+  }
 }

@@ -122,5 +122,21 @@
   "customerPayExpired": "Die Zahlungsfrist für deine Bestellung ist abgelaufen. Möchtest du stattdessen bar bezahlen?",
   "customerPayTransferUnavailable": "Banküberweisung ist vorübergehend nicht verfügbar",
   "customerNewQr": "Neuen QR-Code erstellen",
-  "customerQrSemantics": "QR-Code für die Überweisung"
+  "customerQrSemantics": "QR-Code für die Überweisung",
+  "menuAddTooltip": "Gericht hinzufügen",
+  "menuAddTitle": "Neues Gericht hinzufügen",
+  "menuAddAction": "Hinzufügen",
+  "menuAddNameLabel": "Name",
+  "menuAddDescriptionLabel": "Beschreibung (optional)",
+  "menuAddCategoryLabel": "Kategorie",
+  "menuAddCategoryRequired": "Bitte eine Kategorie wählen",
+  "menuAddAllowToppingsLabel": "Toppings erlauben",
+  "menuAddImageLabel": "Name der Bilddatei (optional)",
+  "menuAddImageHelp": "Die Datei muss bereits im Bilderordner auf dem Server liegen.",
+  "menuAddNameError": "Namen eingeben, höchstens 100 Zeichen",
+  "menuAddDescriptionError": "Beschreibung: höchstens 500 Zeichen",
+  "menuAddImageError": "Ungültiger Dateiname. Nur Kleinbuchstaben, Ziffern und -, Endung .jpg, .jpeg, .png oder .webp",
+  "menuAddDuplicate": "In dieser Kategorie gibt es schon ein Gericht mit diesem Namen",
+  "menuFull": "Die Speisekarte ist voll, es können keine Gerichte mehr hinzugefügt werden",
+  "menuAddedSnack": "Hinzugefügt: {name}"
 }

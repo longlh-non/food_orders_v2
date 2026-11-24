@@ -429,4 +429,55 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get customerQrSemantics => '银行转账二维码';
+
+  @override
+  String get menuAddTooltip => '添加菜品';
+
+  @override
+  String get menuAddTitle => '添加新菜品';
+
+  @override
+  String get menuAddAction => '添加';
+
+  @override
+  String get menuAddNameLabel => '名称';
+
+  @override
+  String get menuAddDescriptionLabel => '描述（可选）';
+
+  @override
+  String get menuAddCategoryLabel => '分类';
+
+  @override
+  String get menuAddCategoryRequired => '请选择分类';
+
+  @override
+  String get menuAddAllowToppingsLabel => '允许加配料';
+
+  @override
+  String get menuAddImageLabel => '图片文件名（可选）';
+
+  @override
+  String get menuAddImageHelp => '该文件必须已在服务器的图片文件夹中。';
+
+  @override
+  String get menuAddNameError => '请输入名称，最多100个字符';
+
+  @override
+  String get menuAddDescriptionError => '描述最多500个字符';
+
+  @override
+  String get menuAddImageError =>
+      '文件名无效。只能使用小写字母、数字和 -，以 .jpg、.jpeg、.png 或 .webp 结尾';
+
+  @override
+  String get menuAddDuplicate => '该分类中已有同名菜品';
+
+  @override
+  String get menuFull => '菜单已满，无法再添加菜品';
+
+  @override
+  String menuAddedSnack(String name) {
+    return '已添加：$name';
+  }
 }

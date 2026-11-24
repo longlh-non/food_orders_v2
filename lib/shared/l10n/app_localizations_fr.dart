@@ -456,4 +456,59 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'Code QR de virement bancaire';
+
+  @override
+  String get menuAddTooltip => 'Ajouter un plat';
+
+  @override
+  String get menuAddTitle => 'Ajouter un nouveau plat';
+
+  @override
+  String get menuAddAction => 'Ajouter';
+
+  @override
+  String get menuAddNameLabel => 'Nom';
+
+  @override
+  String get menuAddDescriptionLabel => 'Description (facultatif)';
+
+  @override
+  String get menuAddCategoryLabel => 'Catégorie';
+
+  @override
+  String get menuAddCategoryRequired => 'Choisissez une catégorie';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'Autoriser les suppléments';
+
+  @override
+  String get menuAddImageLabel => 'Nom du fichier image (facultatif)';
+
+  @override
+  String get menuAddImageHelp =>
+      'Le fichier doit déjà se trouver dans le dossier des images du serveur.';
+
+  @override
+  String get menuAddNameError => 'Saisissez un nom, 100 caractères au maximum';
+
+  @override
+  String get menuAddDescriptionError =>
+      'La description peut contenir 500 caractères au maximum';
+
+  @override
+  String get menuAddImageError =>
+      'Nom de fichier non valide. Utilisez des minuscules, des chiffres et -, avec la fin .jpg, .jpeg, .png ou .webp';
+
+  @override
+  String get menuAddDuplicate =>
+      'Un plat portant ce nom existe déjà dans cette catégorie';
+
+  @override
+  String get menuFull =>
+      'Le menu est plein, impossible d’ajouter d’autres plats';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'Ajouté : $name';
+  }
 }

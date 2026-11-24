@@ -7,10 +7,11 @@ import '../../shared/money.dart';
 import '../api/menu_admin_client.dart';
 import '../state/menu_admin_state.dart';
 import '../state/staff_credentials.dart';
+import '../widgets/menu_item_form_dialog.dart';
 import '../widgets/staff_login_dialog.dart';
 
 /// Staff screen for changing the menu: each item's price and its sold-out
-/// switch. Opened from the AppBar of `OrdersPage` with a plain `Navigator.push`.
+/// switch, and a button that adds a new item. Opened from the AppBar of `OrdersPage` with a plain `Navigator.push`.
 ///
 /// Loads the menu on open (spinner, error with a Retry button, or an empty
 /// message). Staff type the shared staff ID and password in a dialog before
@@ -74,7 +75,9 @@ class _MenuEditPageState extends State<MenuEditPage> {
 
   /// The message for the state's current save error, in the language of
   /// [l10n]; null when there is none.
-  String? _saveErrorText(AppLocalizations l10n) {
+  /// With [adding] the server's "invalid" is not about a price, so it gets the
+  /// general text.
+  String? _saveErrorText(AppLocalizations l10n, {bool adding = false}) {
     final wait = _state.saveErrorWaitSeconds;
     return switch (_state.saveError) {
       null => null,
@@ -83,7 +86,10 @@ class _MenuEditPageState extends State<MenuEditPage> {
       MenuSaveError.tooManyTries =>
         wait == null ? l10n.tooManyTriesLater : l10n.tooManyTriesWait(wait),
       MenuSaveError.notFound => l10n.menuItemNotFound,
-      MenuSaveError.invalid => l10n.menuPriceInvalid,
+      MenuSaveError.invalid =>
+        adding ? l10n.menuSaveFailed : l10n.menuPriceInvalid,
+      MenuSaveError.duplicate => l10n.menuAddDuplicate,
+      MenuSaveError.menuFull => l10n.menuFull,
       MenuSaveError.other => l10n.menuSaveFailed,
     };
   }
@@ -98,13 +104,80 @@ class _MenuEditPageState extends State<MenuEditPage> {
     await _withCredentials(() => _state.setPrice(item.id, price));
   }
 
+  /// Adds an item: asks for the staff ID and password first (if they aren't
+  /// in memory), shows the form, then sends it. When the server says no, the
+  /// form opens again with what staff typed and the reason above the fields;
+  /// when it says yes, a SnackBar names the new item.
+  Future<void> _addItem() async {
+    NewMenuItem? draft;
+    String? error;
+    var needForm = true;
+    while (mounted) {
+      var cancelled = false;
+      MenuSaveResult? result;
+      await _withCredentials(() async {
+        if (needForm) {
+          draft = await showMenuItemFormDialog(
+            context,
+            initial: draft,
+            errorText: error,
+          );
+          if (draft == null || !mounted) {
+            cancelled = true;
+            return MenuSaveResult.ignored;
+          }
+          needForm = false;
+        }
+        return result = await _state.addItem(draft!);
+      });
+      if (cancelled) {
+        // The reopened form was cancelled: drop the add error so the page
+        // banner doesn't keep showing it behind a closed dialog.
+        _state.clearSaveError();
+        return;
+      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      switch (result) {
+        case MenuSaveResult.saved:
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.menuAddedSnack(draft!.name))),
+          );
+          return;
+        case MenuSaveResult.failed:
+          error = _saveErrorText(l10n, adding: true);
+          needForm = true;
+        case MenuSaveResult.needsCredentials:
+        case MenuSaveResult.ignored:
+        case null:
+          // Staff cancelled the login, or another add is already running.
+          return;
+      }
+    }
+  }
+
   /// Rows rebuild from [_state]: a spinner while loading, an error with
   /// Retry, an empty message, or the list with an error banner on top.
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.menuEditTitle)),
+      appBar: AppBar(
+        title: Text(l10n.menuEditTitle),
+        actions: [
+          // Only once the menu has loaded; off while an add is running.
+          ListenableBuilder(
+            listenable: _state,
+            builder: (context, _) => _state.hasLoaded
+                ? IconButton(
+                    tooltip: l10n.menuAddTooltip,
+                    icon: const Icon(Icons.add),
+                    onPressed: _state.isAdding ? null : _addItem,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
       body: ListenableBuilder(
         listenable: _state,
         builder: (context, _) {

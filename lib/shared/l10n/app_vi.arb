@@ -608,5 +608,74 @@
   "customerQrSemantics": "Mã QR chuyển khoản",
   "@customerQrSemantics": {
     "description": "Payment page: screen reader label of the QR."
+  },
+  "menuAddTooltip": "Thêm món",
+  "@menuAddTooltip": {
+    "description": "Tooltip of the app bar button that opens the add-item form."
+  },
+  "menuAddTitle": "Thêm món mới",
+  "@menuAddTitle": {
+    "description": "Title of the add-item form."
+  },
+  "menuAddAction": "Thêm",
+  "@menuAddAction": {
+    "description": "Button: add the new item to the menu."
+  },
+  "menuAddNameLabel": "Tên món",
+  "@menuAddNameLabel": {
+    "description": "Field label: name of the new menu item."
+  },
+  "menuAddDescriptionLabel": "Mô tả (không bắt buộc)",
+  "@menuAddDescriptionLabel": {
+    "description": "Field label: optional description of the new item."
+  },
+  "menuAddCategoryLabel": "Mục",
+  "@menuAddCategoryLabel": {
+    "description": "Dropdown label: category of the new item."
+  },
+  "menuAddCategoryRequired": "Hãy chọn một mục",
+  "@menuAddCategoryRequired": {
+    "description": "Error under the category dropdown: nothing chosen yet."
+  },
+  "menuAddAllowToppingsLabel": "Cho phép thêm topping",
+  "@menuAddAllowToppingsLabel": {
+    "description": "Switch label: the new food can take toppings. Shown only for food."
+  },
+  "menuAddImageLabel": "Tên tệp ảnh (không bắt buộc)",
+  "@menuAddImageLabel": {
+    "description": "Field label: optional picture file name."
+  },
+  "menuAddImageHelp": "Tệp ảnh phải có sẵn trong thư mục ảnh trên máy chủ.",
+  "@menuAddImageHelp": {
+    "description": "Hint under the picture field: the file must already be in the images folder on the server."
+  },
+  "menuAddNameError": "Nhập tên món, tối đa 100 ký tự",
+  "@menuAddNameError": {
+    "description": "Error under the name field: empty, longer than 100 characters, or has control characters."
+  },
+  "menuAddDescriptionError": "Mô tả tối đa 500 ký tự",
+  "@menuAddDescriptionError": {
+    "description": "Error under the description field: longer than 500 characters or has control characters."
+  },
+  "menuAddImageError": "Tên tệp không hợp lệ. Chỉ dùng chữ thường, số và dấu -, đuôi .jpg, .jpeg, .png hoặc .webp",
+  "@menuAddImageError": {
+    "description": "Error under the picture field: not a valid file name (lowercase letters, digits and -, ending .jpg, .jpeg, .png or .webp)."
+  },
+  "menuAddDuplicate": "Đã có món trùng tên trong mục này",
+  "@menuAddDuplicate": {
+    "description": "Error: an item with that name already exists in that category."
+  },
+  "menuFull": "Thực đơn đã đầy, không thêm được món nữa",
+  "@menuFull": {
+    "description": "Error: the menu already has the most items it can hold."
+  },
+  "menuAddedSnack": "Đã thêm: {name}",
+  "@menuAddedSnack": {
+    "description": "Snack bar after adding: {name} is the name of the new item.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

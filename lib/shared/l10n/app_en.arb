@@ -122,5 +122,21 @@
   "customerPayExpired": "The payment time for your order has run out. Would you like to pay in cash instead?",
   "customerPayTransferUnavailable": "Bank transfer is temporarily unavailable",
   "customerNewQr": "Create a new QR code",
-  "customerQrSemantics": "Bank transfer QR code"
+  "customerQrSemantics": "Bank transfer QR code",
+  "menuAddTooltip": "Add item",
+  "menuAddTitle": "Add a new item",
+  "menuAddAction": "Add",
+  "menuAddNameLabel": "Name",
+  "menuAddDescriptionLabel": "Description (optional)",
+  "menuAddCategoryLabel": "Category",
+  "menuAddCategoryRequired": "Choose a category",
+  "menuAddAllowToppingsLabel": "Allow toppings",
+  "menuAddImageLabel": "Picture file name (optional)",
+  "menuAddImageHelp": "The file must already be in the images folder on the server.",
+  "menuAddNameError": "Enter a name, up to 100 characters",
+  "menuAddDescriptionError": "Description: up to 500 characters",
+  "menuAddImageError": "Not a valid file name. Use lowercase letters, digits and -, ending in .jpg, .jpeg, .png or .webp",
+  "menuAddDuplicate": "An item with this name already exists in this category",
+  "menuFull": "The menu is full, no more items can be added",
+  "menuAddedSnack": "Added: {name}"
 }

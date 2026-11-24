@@ -122,5 +122,21 @@
   "customerPayExpired": "Время оплаты вашего заказа истекло. Хотите заплатить наличными?",
   "customerPayTransferUnavailable": "Банковский перевод временно недоступен",
   "customerNewQr": "Создать новый QR-код",
-  "customerQrSemantics": "QR-код для банковского перевода"
+  "customerQrSemantics": "QR-код для банковского перевода",
+  "menuAddTooltip": "Добавить блюдо",
+  "menuAddTitle": "Добавить новое блюдо",
+  "menuAddAction": "Добавить",
+  "menuAddNameLabel": "Название",
+  "menuAddDescriptionLabel": "Описание (необязательно)",
+  "menuAddCategoryLabel": "Категория",
+  "menuAddCategoryRequired": "Выберите категорию",
+  "menuAddAllowToppingsLabel": "Разрешить добавки",
+  "menuAddImageLabel": "Имя файла картинки (необязательно)",
+  "menuAddImageHelp": "Файл уже должен лежать в папке с картинками на сервере.",
+  "menuAddNameError": "Введите название, не более 100 символов",
+  "menuAddDescriptionError": "Описание: не более 500 символов",
+  "menuAddImageError": "Недопустимое имя файла. Используйте строчные буквы, цифры и -, окончание .jpg, .jpeg, .png или .webp",
+  "menuAddDuplicate": "Блюдо с таким названием уже есть в этой категории",
+  "menuFull": "Меню заполнено, добавить ещё блюда нельзя",
+  "menuAddedSnack": "Добавлено: {name}"
 }

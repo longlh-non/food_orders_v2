@@ -122,5 +122,21 @@
   "customerPayExpired": "El plazo de pago de tu pedido ha terminado. ¿Quieres pagar en efectivo?",
   "customerPayTransferUnavailable": "La transferencia bancaria no está disponible por ahora",
   "customerNewQr": "Crear un código QR nuevo",
-  "customerQrSemantics": "Código QR de transferencia bancaria"
+  "customerQrSemantics": "Código QR de transferencia bancaria",
+  "menuAddTooltip": "Añadir plato",
+  "menuAddTitle": "Añadir un plato nuevo",
+  "menuAddAction": "Añadir",
+  "menuAddNameLabel": "Nombre",
+  "menuAddDescriptionLabel": "Descripción (opcional)",
+  "menuAddCategoryLabel": "Categoría",
+  "menuAddCategoryRequired": "Elige una categoría",
+  "menuAddAllowToppingsLabel": "Permitir extras",
+  "menuAddImageLabel": "Nombre del archivo de imagen (opcional)",
+  "menuAddImageHelp": "El archivo ya debe estar en la carpeta de imágenes del servidor.",
+  "menuAddNameError": "Escribe un nombre, de hasta 100 caracteres",
+  "menuAddDescriptionError": "La descripción admite hasta 500 caracteres",
+  "menuAddImageError": "Nombre de archivo no válido. Usa minúsculas, dígitos y -, y termina en .jpg, .jpeg, .png o .webp",
+  "menuAddDuplicate": "Ya existe un plato con ese nombre en esta categoría",
+  "menuFull": "El menú está lleno, no se pueden añadir más platos",
+  "menuAddedSnack": "Añadido: {name}"
 }

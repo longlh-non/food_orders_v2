@@ -122,5 +122,21 @@
   "customerPayExpired": "ໝົດເວລາຊຳລະເງິນສຳລັບຄຳສັ່ງຊື້ຂອງທ່ານແລ້ວ. ທ່ານຕ້ອງການປ່ຽນເປັນຊຳລະເງິນສົດບໍ?",
   "customerPayTransferUnavailable": "ການໂອນເງິນຊົ່ວຄາວໃຊ້ບໍ່ໄດ້",
   "customerNewQr": "ສ້າງລະຫັດ QR ໃໝ່",
-  "customerQrSemantics": "ລະຫັດ QR ສຳລັບໂອນເງິນ"
+  "customerQrSemantics": "ລະຫັດ QR ສຳລັບໂອນເງິນ",
+  "menuAddTooltip": "ເພີ່ມເມນູ",
+  "menuAddTitle": "ເພີ່ມເມນູໃໝ່",
+  "menuAddAction": "ເພີ່ມ",
+  "menuAddNameLabel": "ຊື່",
+  "menuAddDescriptionLabel": "ລາຍລະອຽດ (ບໍ່ບັງຄັບ)",
+  "menuAddCategoryLabel": "ໝວດ",
+  "menuAddCategoryRequired": "ກະລຸນາເລືອກໝວດ",
+  "menuAddAllowToppingsLabel": "ອະນຸຍາດໃຫ້ເພີ່ມທ໊ອບປິງ",
+  "menuAddImageLabel": "ຊື່ໄຟລ໌ຮູບ (ບໍ່ບັງຄັບ)",
+  "menuAddImageHelp": "ໄຟລ໌ຕ້ອງຢູ່ໃນໂຟນເດີຮູບຂອງເຊີບເວີແລ້ວ.",
+  "menuAddNameError": "ໃສ່ຊື່, ສູງສຸດ 100 ຕົວອັກສອນ",
+  "menuAddDescriptionError": "ລາຍລະອຽດສູງສຸດ 500 ຕົວອັກສອນ",
+  "menuAddImageError": "ຊື່ໄຟລ໌ບໍ່ຖືກຕ້ອງ. ໃຊ້ແຕ່ຕົວອັກສອນນ້ອຍ, ຕົວເລກ ແລະ - ແລະລົງທ້າຍດ້ວຍ .jpg, .jpeg, .png ຫຼື .webp",
+  "menuAddDuplicate": "ມີເມນູຊື່ນີ້ໃນໝວດນີ້ແລ້ວ",
+  "menuFull": "ເມນູເຕັມແລ້ວ, ເພີ່ມອີກບໍ່ໄດ້",
+  "menuAddedSnack": "ເພີ່ມແລ້ວ: {name}"
 }

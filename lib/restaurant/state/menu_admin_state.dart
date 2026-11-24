@@ -19,8 +19,69 @@ int? parseMenuPrice(String text) {
   return value <= maxMenuPrice ? value : null;
 }
 
+/// The most characters (UTF-16 units) of a new item's name, after trimming.
+/// Keep in step with `maxMenuNameUnits` in `backend/lib/menu_api.dart`.
+const maxMenuNameUnits = 100;
+
+/// The most characters (UTF-16 units) of a new item's description. Keep in
+/// step with `maxMenuDescriptionUnits` in `backend/lib/menu_api.dart`.
+const maxMenuDescriptionUnits = 500;
+
+/// The first thing wrong with a new item, found without asking the server.
+/// The form turns it into text in the user's language.
+enum NewItemProblem {
+  nameEmpty,
+  nameTooLong,
+  nameBadCharacters,
+  descriptionTooLong,
+  descriptionBadCharacters,
+  priceInvalid,
+  toppingsNeedFood,
+  imageInvalid,
+}
+
+bool _hasControl(String text, {bool allowNewline = false}) {
+  for (final unit in text.codeUnits) {
+    if (allowNewline && unit == 0x0A) continue;
+    if (unit < 0x20 || (unit >= 0x7F && unit <= 0x9F)) return true;
+  }
+  return false;
+}
+
+/// Checks a new item against the same limits as the server and returns the
+/// first problem, or null when it looks fine. [priceText] is what staff typed
+/// (see [parseMenuPrice]); [image] is a picture file name or null. The
+/// server checks again.
+NewItemProblem? validateNewItem({
+  required String name,
+  required String description,
+  required String priceText,
+  required MenuCategory category,
+  required bool allowToppings,
+  required String? image,
+}) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return NewItemProblem.nameEmpty;
+  if (trimmed.length > maxMenuNameUnits) return NewItemProblem.nameTooLong;
+  if (_hasControl(trimmed)) return NewItemProblem.nameBadCharacters;
+  if (description.length > maxMenuDescriptionUnits) {
+    return NewItemProblem.descriptionTooLong;
+  }
+  if (_hasControl(description, allowNewline: true)) {
+    return NewItemProblem.descriptionBadCharacters;
+  }
+  if (parseMenuPrice(priceText) == null) return NewItemProblem.priceInvalid;
+  if (allowToppings && category != MenuCategory.food) {
+    return NewItemProblem.toppingsNeedFood;
+  }
+  if (image != null && !menuImageName.hasMatch(image)) {
+    return NewItemProblem.imageInvalid;
+  }
+  return null;
+}
+
 /// What happened to a [MenuAdminState.setPrice] / [MenuAdminState.setAvailable]
-/// call.
+/// / [MenuAdminState.addItem] call.
 enum MenuSaveResult {
   /// The server accepted it and the item was replaced by its reply.
   saved,
@@ -51,8 +112,14 @@ enum MenuSaveError {
   /// The item is not on the server's menu (404).
   notFound,
 
-  /// The price is not valid.
+  /// The price is not valid (or, when adding, the server refused the item).
   invalid,
+
+  /// Adding: an item with that name already exists in that category (409).
+  duplicate,
+
+  /// Adding: the menu is full (503).
+  menuFull,
 
   /// Anything else.
   other,
@@ -83,7 +150,11 @@ class MenuAdminState extends ChangeNotifier {
   final _saving = <String>{};
   MenuSaveError? _saveError;
   int? _saveErrorWaitSeconds;
+  bool _adding = false;
   bool _disposed = false;
+
+  /// True while a new item is being added; the form should be disabled.
+  bool get isAdding => _adding;
 
   /// The menu as last loaded or saved (empty until the first load).
   List<MenuItem> get items => _items;
@@ -187,7 +258,10 @@ class MenuAdminState extends ChangeNotifier {
           _saveError = MenuSaveError.notFound;
         case MenuAdminFailure.invalid:
           _saveError = MenuSaveError.invalid;
+        case MenuAdminFailure.duplicate:
+        case MenuAdminFailure.menuFull:
         case MenuAdminFailure.other:
+          // Duplicate and menuFull only come from adding, never from here.
           _saveError = MenuSaveError.other;
       }
       return MenuSaveResult.failed;
@@ -198,6 +272,60 @@ class MenuAdminState extends ChangeNotifier {
       return MenuSaveResult.failed;
     } finally {
       _saving.remove(id);
+      _notify();
+    }
+  }
+
+  /// Adds a new item. On success the server's item is appended to [items].
+  /// On failure the list is unchanged and [saveError] says why. Without
+  /// credentials nothing is sent. A call while another add runs is ignored.
+  Future<MenuSaveResult> addItem(NewMenuItem draft) async {
+    if (_disposed || _adding) return MenuSaveResult.ignored;
+    final credentials = _holder.value;
+    if (credentials == null) return MenuSaveResult.needsCredentials;
+    _adding = true;
+    _saveError = null;
+    _saveErrorWaitSeconds = null;
+    _notify();
+    try {
+      final created = await _admin.addItem(draft, credentials: credentials);
+      // A reply that repeats an id already in the list replaces that row, so
+      // the list never holds two rows with one id.
+      final known = _items.any((i) => i.id == created.id);
+      _items = List.unmodifiable(
+        known
+            ? [for (final i in _items) i.id == created.id ? created : i]
+            : [..._items, created],
+      );
+      return MenuSaveResult.saved;
+    } on MenuAdminException catch (e) {
+      switch (e.failure) {
+        case MenuAdminFailure.wrongCredentials:
+          _holder.clear();
+          _saveError = MenuSaveError.wrongCredentials;
+          return MenuSaveResult.needsCredentials;
+        case MenuAdminFailure.editingDisabled:
+          _saveError = MenuSaveError.editingDisabled;
+        case MenuAdminFailure.tooManyTries:
+          _saveError = MenuSaveError.tooManyTries;
+          _saveErrorWaitSeconds = e.retryAfterSeconds;
+        case MenuAdminFailure.invalid:
+          _saveError = MenuSaveError.invalid;
+        case MenuAdminFailure.duplicate:
+          _saveError = MenuSaveError.duplicate;
+        case MenuAdminFailure.menuFull:
+          _saveError = MenuSaveError.menuFull;
+        case MenuAdminFailure.notFound:
+        case MenuAdminFailure.other:
+          _saveError = MenuSaveError.other;
+      }
+      return MenuSaveResult.failed;
+    } on Object {
+      // e.g. credentials the client refuses to send; keep no exception text.
+      _saveError = MenuSaveError.other;
+      return MenuSaveResult.failed;
+    } finally {
+      _adding = false;
       _notify();
     }
   }

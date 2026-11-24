@@ -122,5 +122,21 @@
   "customerPayExpired": "Le délai de paiement de votre commande est dépassé. Souhaitez-vous payer en espèces ?",
   "customerPayTransferUnavailable": "Le virement bancaire est temporairement indisponible",
   "customerNewQr": "Créer un nouveau code QR",
-  "customerQrSemantics": "Code QR de virement bancaire"
+  "customerQrSemantics": "Code QR de virement bancaire",
+  "menuAddTooltip": "Ajouter un plat",
+  "menuAddTitle": "Ajouter un nouveau plat",
+  "menuAddAction": "Ajouter",
+  "menuAddNameLabel": "Nom",
+  "menuAddDescriptionLabel": "Description (facultatif)",
+  "menuAddCategoryLabel": "Catégorie",
+  "menuAddCategoryRequired": "Choisissez une catégorie",
+  "menuAddAllowToppingsLabel": "Autoriser les suppléments",
+  "menuAddImageLabel": "Nom du fichier image (facultatif)",
+  "menuAddImageHelp": "Le fichier doit déjà se trouver dans le dossier des images du serveur.",
+  "menuAddNameError": "Saisissez un nom, 100 caractères au maximum",
+  "menuAddDescriptionError": "La description peut contenir 500 caractères au maximum",
+  "menuAddImageError": "Nom de fichier non valide. Utilisez des minuscules, des chiffres et -, avec la fin .jpg, .jpeg, .png ou .webp",
+  "menuAddDuplicate": "Un plat portant ce nom existe déjà dans cette catégorie",
+  "menuFull": "Le menu est plein, impossible d’ajouter d’autres plats",
+  "menuAddedSnack": "Ajouté : {name}"
 }

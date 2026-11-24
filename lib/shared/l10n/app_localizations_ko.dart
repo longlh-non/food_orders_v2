@@ -429,4 +429,55 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get customerQrSemantics => '계좌 이체 QR 코드';
+
+  @override
+  String get menuAddTooltip => '메뉴 추가';
+
+  @override
+  String get menuAddTitle => '새 메뉴 추가';
+
+  @override
+  String get menuAddAction => '추가';
+
+  @override
+  String get menuAddNameLabel => '이름';
+
+  @override
+  String get menuAddDescriptionLabel => '설명 (선택)';
+
+  @override
+  String get menuAddCategoryLabel => '분류';
+
+  @override
+  String get menuAddCategoryRequired => '분류를 선택하세요';
+
+  @override
+  String get menuAddAllowToppingsLabel => '토핑 허용';
+
+  @override
+  String get menuAddImageLabel => '사진 파일 이름 (선택)';
+
+  @override
+  String get menuAddImageHelp => '파일은 서버의 이미지 폴더에 이미 있어야 합니다.';
+
+  @override
+  String get menuAddNameError => '이름을 입력하세요 (최대 100자)';
+
+  @override
+  String get menuAddDescriptionError => '설명은 최대 500자입니다';
+
+  @override
+  String get menuAddImageError =>
+      '파일 이름이 올바르지 않습니다. 소문자, 숫자, -만 사용하고 .jpg, .jpeg, .png 또는 .webp로 끝나야 합니다';
+
+  @override
+  String get menuAddDuplicate => '이 분류에 같은 이름의 메뉴가 이미 있습니다';
+
+  @override
+  String get menuFull => '메뉴가 가득 차서 더 추가할 수 없습니다';
+
+  @override
+  String menuAddedSnack(String name) {
+    return '추가됨: $name';
+  }
 }

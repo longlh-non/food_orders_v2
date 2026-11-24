@@ -122,5 +122,21 @@
   "customerPayExpired": "ご注文の支払い期限が切れました。現金払いに変更しますか？",
   "customerPayTransferUnavailable": "銀行振込は一時的にご利用いただけません",
   "customerNewQr": "新しいQRコードを作成",
-  "customerQrSemantics": "銀行振込のQRコード"
+  "customerQrSemantics": "銀行振込のQRコード",
+  "menuAddTooltip": "メニューを追加",
+  "menuAddTitle": "新しいメニューを追加",
+  "menuAddAction": "追加",
+  "menuAddNameLabel": "名前",
+  "menuAddDescriptionLabel": "説明（任意）",
+  "menuAddCategoryLabel": "カテゴリ",
+  "menuAddCategoryRequired": "カテゴリを選んでください",
+  "menuAddAllowToppingsLabel": "トッピングを許可",
+  "menuAddImageLabel": "画像ファイル名（任意）",
+  "menuAddImageHelp": "ファイルはサーバーの画像フォルダーにすでに置いてある必要があります。",
+  "menuAddNameError": "名前を入力してください（100文字まで）",
+  "menuAddDescriptionError": "説明は500文字までです",
+  "menuAddImageError": "ファイル名が正しくありません。小文字、数字、- のみで、末尾は .jpg、.jpeg、.png、.webp にしてください",
+  "menuAddDuplicate": "このカテゴリには同じ名前のメニューがすでにあります",
+  "menuFull": "メニューがいっぱいで、これ以上追加できません",
+  "menuAddedSnack": "追加しました：{name}"
 }

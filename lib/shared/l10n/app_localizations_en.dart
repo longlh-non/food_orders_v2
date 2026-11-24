@@ -448,4 +448,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'Bank transfer QR code';
+
+  @override
+  String get menuAddTooltip => 'Add item';
+
+  @override
+  String get menuAddTitle => 'Add a new item';
+
+  @override
+  String get menuAddAction => 'Add';
+
+  @override
+  String get menuAddNameLabel => 'Name';
+
+  @override
+  String get menuAddDescriptionLabel => 'Description (optional)';
+
+  @override
+  String get menuAddCategoryLabel => 'Category';
+
+  @override
+  String get menuAddCategoryRequired => 'Choose a category';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'Allow toppings';
+
+  @override
+  String get menuAddImageLabel => 'Picture file name (optional)';
+
+  @override
+  String get menuAddImageHelp =>
+      'The file must already be in the images folder on the server.';
+
+  @override
+  String get menuAddNameError => 'Enter a name, up to 100 characters';
+
+  @override
+  String get menuAddDescriptionError => 'Description: up to 500 characters';
+
+  @override
+  String get menuAddImageError =>
+      'Not a valid file name. Use lowercase letters, digits and -, ending in .jpg, .jpeg, .png or .webp';
+
+  @override
+  String get menuAddDuplicate =>
+      'An item with this name already exists in this category';
+
+  @override
+  String get menuFull => 'The menu is full, no more items can be added';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'Added: $name';
+  }
 }

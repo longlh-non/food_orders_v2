@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:food_orders/restaurant/api/menu_admin_client.dart';
 import 'package:food_orders/restaurant/state/staff_credentials.dart';
+import 'package:food_orders/shared/models/menu_item.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -212,5 +213,124 @@ void main() {
   test('StaffCredentials never shows its values', () {
     expect(creds.toString(), isNot(contains(token)));
     expect(creds.toString(), isNot(contains(staffId)));
+  });
+
+  group('addItem', () {
+    const draft = NewMenuItem(
+      name: 'Xôi lá cẩm',
+      description: 'Ngon',
+      price: 30000,
+      category: MenuCategory.food,
+      allowToppings: true,
+    );
+    Map<String, Object?> created() => {
+      ...itemJson(),
+      'id': 'xoi-la-cam',
+      'name': 'Xôi lá cẩm',
+    };
+
+    test('sends POST /api/menu with exactly the draft keys', () async {
+      final api = answering(() async => json(created(), 201));
+      final item = await api.addItem(draft, credentials: creds);
+      final request = sent.single;
+      expect(request.method, 'POST');
+      expect(request.url.toString(), '/api/menu');
+      expect(request.headers['X-Staff-Id'], staffId);
+      expect(request.headers['X-Staff-Password'], token);
+      expect(request.headers['Content-Type'], startsWith('application/json'));
+      expect(request.body, isNot(contains(token)));
+      expect(jsonDecode(request.body), {
+        'name': 'Xôi lá cẩm',
+        'description': 'Ngon',
+        'price': 30000,
+        'category': 'food',
+        'allowToppings': true,
+      });
+      expect(item.id, 'xoi-la-cam');
+    });
+
+    test('image is sent only when set', () async {
+      final api = answering(() async => json(created(), 201));
+      await api.addItem(
+        const NewMenuItem(
+          name: 'A',
+          price: 0,
+          category: MenuCategory.drink,
+          image: 'a.webp',
+        ),
+        credentials: creds,
+      );
+      expect(jsonDecode(sent.single.body)['image'], 'a.webp');
+    });
+
+    for (final (status, failure) in [
+      (400, MenuAdminFailure.invalid),
+      (401, MenuAdminFailure.wrongCredentials),
+      (403, MenuAdminFailure.editingDisabled),
+      (409, MenuAdminFailure.duplicate),
+      (413, MenuAdminFailure.invalid),
+      (429, MenuAdminFailure.tooManyTries),
+      (500, MenuAdminFailure.other),
+      (503, MenuAdminFailure.menuFull),
+      (200, MenuAdminFailure.other),
+      (204, MenuAdminFailure.other),
+    ]) {
+      test('$status -> ${failure.name}', () async {
+        final api = answering(
+          () async => http.Response('server text $token', status),
+        );
+        await expectFailure(
+          api.addItem(draft, credentials: creds),
+          failure,
+          status: status,
+        );
+      });
+    }
+
+    test('429 carries Retry-After', () async {
+      final api = answering(
+        () async => http.Response('x', 429, headers: {'retry-after': '30'}),
+      );
+      try {
+        await api.addItem(draft, credentials: creds);
+        fail('should throw');
+      } on MenuAdminException catch (e) {
+        expect(e.retryAfterSeconds, 30);
+      }
+    });
+
+    test('no answer -> other', () async {
+      final api = answering(() async => throw http.ClientException('x'));
+      await expectFailure(
+        api.addItem(draft, credentials: creds),
+        MenuAdminFailure.other,
+      );
+    });
+
+    for (final (label, body) in [
+      ('not JSON', http.Response('<html>', 201)),
+      ('a list', json([1], 201)),
+      ('a missing name', json({...created()}..remove('name'), 201)),
+    ]) {
+      test('a 201 with $label -> other', () async {
+        final api = answering(() async => body);
+        await expectFailure(
+          api.addItem(draft, credentials: creds),
+          MenuAdminFailure.other,
+          status: 201,
+        );
+      });
+    }
+
+    test('unsendable credentials: ArgumentError, nothing sent', () {
+      final api = answering(() async => json(created(), 201));
+      for (final bad in [
+        const StaffCredentials(id: 'nhân-viên', password: token),
+        const StaffCredentials(id: staffId, password: ''),
+      ]) {
+        expect(() => api.addItem(draft, credentials: bad), throwsArgumentError);
+      }
+      expect(sent, isEmpty);
+    });
   });
 }

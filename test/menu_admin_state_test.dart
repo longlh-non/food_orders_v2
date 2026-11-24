@@ -6,6 +6,7 @@ import 'package:food_orders/restaurant/api/menu_admin_client.dart';
 import 'package:food_orders/restaurant/state/menu_admin_state.dart';
 import 'package:food_orders/restaurant/state/staff_credentials.dart';
 import 'package:food_orders/shared/api/order_api_client.dart';
+import 'package:food_orders/shared/models/menu_item.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -254,5 +255,219 @@ void main() {
     state.dispose();
     gate.complete(json(item('a', 'Trà đá', price: 5000)));
     await pending;
+  });
+
+  group('addItem', () {
+    const draft = NewMenuItem(
+      name: 'Cam vắt',
+      price: 20000,
+      category: MenuCategory.drink,
+    );
+    late List<http.Request> posts;
+    late Future<http.Response> Function(http.Request) onPost;
+
+    MenuAdminState buildAdd() {
+      final mock = MockClient((r) {
+        if (r.method == 'GET') return onGet(r);
+        posts.add(r);
+        return onPost(r);
+      });
+      return MenuAdminState(
+        api: OrderApiClient(client: mock),
+        admin: MenuAdminClient(client: mock),
+      );
+    }
+
+    setUp(() {
+      posts = [];
+      onPost = (_) async => json(item('cam-vat', 'Cam vắt'), 201);
+    });
+
+    test('success appends the server item and keeps order', () async {
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      await state.load();
+      expect(await state.addItem(draft), MenuSaveResult.saved);
+      expect(state.items.map((i) => i.id), ['a', 'b', 'cam-vat']);
+      expect(state.saveError, isNull);
+      expect(state.isAdding, isFalse);
+      expect(posts.single.url.path, '/api/menu');
+      expect(posts.single.headers['X-Staff-Id'], staffId);
+    });
+
+    test('a reply that repeats a known id replaces that row', () async {
+      onPost = (_) async => json(item('a', 'Cam vắt'), 201);
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      await state.load();
+      expect(await state.addItem(draft), MenuSaveResult.saved);
+      expect(state.items.map((i) => i.id), ['a', 'b']);
+      expect(state.items.first.name, 'Cam vắt');
+    });
+
+    for (final (status, error) in [
+      (400, MenuSaveError.invalid),
+      (403, MenuSaveError.editingDisabled),
+      (409, MenuSaveError.duplicate),
+      (413, MenuSaveError.invalid),
+      (429, MenuSaveError.tooManyTries),
+      (500, MenuSaveError.other),
+      (503, MenuSaveError.menuFull),
+    ]) {
+      test('$status keeps the list and sets $error', () async {
+        onPost = (_) async => http.Response('$staffId $password', status);
+        final state = buildAdd();
+        addTearDown(state.dispose);
+        await state.load();
+        expect(await state.addItem(draft), MenuSaveResult.failed);
+        expect(state.items, hasLength(2));
+        expect(state.saveError, error);
+        expect(state.isAdding, isFalse);
+        expect(StaffCredentialsHolder.instance.value, isNotNull);
+      });
+    }
+
+    test('429 keeps the Retry-After wait', () async {
+      onPost = (_) async =>
+          http.Response('x', 429, headers: {'retry-after': '42'});
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      await state.addItem(draft);
+      expect(state.saveErrorWaitSeconds, 42);
+    });
+
+    test('401 clears the holder and needs credentials', () async {
+      onPost = (_) async => http.Response('x', 401);
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      await state.load();
+      expect(await state.addItem(draft), MenuSaveResult.needsCredentials);
+      expect(StaffCredentialsHolder.instance.value, isNull);
+      expect(state.saveError, MenuSaveError.wrongCredentials);
+      expect(state.items, hasLength(2));
+    });
+
+    test('no credentials: nothing is sent', () async {
+      StaffCredentialsHolder.instance.clear();
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      expect(await state.addItem(draft), MenuSaveResult.needsCredentials);
+      expect(posts, isEmpty);
+    });
+
+    test('a second add while adding is ignored; isAdding is true', () async {
+      final gate = Completer<http.Response>();
+      onPost = (_) => gate.future;
+      final state = buildAdd();
+      addTearDown(state.dispose);
+      await state.load();
+      final first = state.addItem(draft);
+      expect(state.isAdding, isTrue);
+      expect(await state.addItem(draft), MenuSaveResult.ignored);
+      gate.complete(json(item('cam-vat', 'Cam vắt'), 201));
+      expect(await first, MenuSaveResult.saved);
+      expect(posts, hasLength(1));
+      expect(state.isAdding, isFalse);
+    });
+
+    test('a reply after dispose does not notify or throw', () async {
+      final gate = Completer<http.Response>();
+      onPost = (_) => gate.future;
+      final state = buildAdd();
+      await state.load();
+      final pending = state.addItem(draft);
+      state.dispose();
+      gate.complete(json(item('cam-vat', 'Cam vắt'), 201));
+      await pending;
+    });
+  });
+
+  group('validateNewItem', () {
+    NewItemProblem? check({
+      String name = 'Xôi',
+      String description = '',
+      String price = '1000',
+      MenuCategory category = MenuCategory.food,
+      bool toppings = false,
+      String? image,
+    }) => validateNewItem(
+      name: name,
+      description: description,
+      priceText: price,
+      category: category,
+      allowToppings: toppings,
+      image: image,
+    );
+
+    test('a good item has no problem', () {
+      expect(check(), isNull);
+      expect(check(toppings: true, image: 'xoi-1.webp'), isNull);
+    });
+
+    test('name limits: trimmed, 1 to 100 units', () {
+      expect(check(name: ''), NewItemProblem.nameEmpty);
+      expect(check(name: '  \t '), NewItemProblem.nameEmpty);
+      expect(check(name: ' ${'a' * 100} '), isNull);
+      expect(check(name: 'a' * 101), NewItemProblem.nameTooLong);
+      expect(check(name: 'a\nb'), NewItemProblem.nameBadCharacters);
+      expect(check(name: 'a\u0085b'), NewItemProblem.nameBadCharacters);
+    });
+
+    test('an emoji counts as 2 units', () {
+      expect(check(name: '😀' * 50), isNull);
+      expect(check(name: '😀' * 50 + 'a'), NewItemProblem.nameTooLong);
+    });
+
+    test('description limits: 500 units, newline allowed', () {
+      expect(check(description: 'a' * 500), isNull);
+      expect(check(description: 'a' * 501), NewItemProblem.descriptionTooLong);
+      expect(check(description: 'a\nb'), isNull);
+      expect(
+        check(description: 'a\tb'),
+        NewItemProblem.descriptionBadCharacters,
+      );
+    });
+
+    test('price edges', () {
+      expect(check(price: '0'), isNull);
+      expect(check(price: '1000000'), isNull);
+      expect(check(price: '1000001'), NewItemProblem.priceInvalid);
+      expect(check(price: '-1'), NewItemProblem.priceInvalid);
+      expect(check(price: '1.5'), NewItemProblem.priceInvalid);
+      expect(check(price: ''), NewItemProblem.priceInvalid);
+    });
+
+    test('toppings only for food', () {
+      expect(check(toppings: true), isNull);
+      for (final c in [
+        MenuCategory.snack,
+        MenuCategory.drink,
+        MenuCategory.nibble,
+      ]) {
+        expect(
+          check(category: c, toppings: true),
+          NewItemProblem.toppingsNeedFood,
+        );
+        expect(check(category: c), isNull);
+      }
+    });
+
+    test('image rule', () {
+      expect(check(image: 'a.jpg'), isNull);
+      for (final bad in [
+        'A.jpg',
+        'a.gif',
+        'a/b.png',
+        '../a.png',
+        'a b.png',
+        '',
+      ]) {
+        expect(check(image: bad), NewItemProblem.imageInvalid, reason: bad);
+      }
+    });
+
+    test('reports the first problem', () {
+      expect(check(name: '', price: 'x'), NewItemProblem.nameEmpty);
+    });
   });
 }

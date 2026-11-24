@@ -435,4 +435,55 @@ class AppLocalizationsLo extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'ລະຫັດ QR ສຳລັບໂອນເງິນ';
+
+  @override
+  String get menuAddTooltip => 'ເພີ່ມເມນູ';
+
+  @override
+  String get menuAddTitle => 'ເພີ່ມເມນູໃໝ່';
+
+  @override
+  String get menuAddAction => 'ເພີ່ມ';
+
+  @override
+  String get menuAddNameLabel => 'ຊື່';
+
+  @override
+  String get menuAddDescriptionLabel => 'ລາຍລະອຽດ (ບໍ່ບັງຄັບ)';
+
+  @override
+  String get menuAddCategoryLabel => 'ໝວດ';
+
+  @override
+  String get menuAddCategoryRequired => 'ກະລຸນາເລືອກໝວດ';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'ອະນຸຍາດໃຫ້ເພີ່ມທ໊ອບປິງ';
+
+  @override
+  String get menuAddImageLabel => 'ຊື່ໄຟລ໌ຮູບ (ບໍ່ບັງຄັບ)';
+
+  @override
+  String get menuAddImageHelp => 'ໄຟລ໌ຕ້ອງຢູ່ໃນໂຟນເດີຮູບຂອງເຊີບເວີແລ້ວ.';
+
+  @override
+  String get menuAddNameError => 'ໃສ່ຊື່, ສູງສຸດ 100 ຕົວອັກສອນ';
+
+  @override
+  String get menuAddDescriptionError => 'ລາຍລະອຽດສູງສຸດ 500 ຕົວອັກສອນ';
+
+  @override
+  String get menuAddImageError =>
+      'ຊື່ໄຟລ໌ບໍ່ຖືກຕ້ອງ. ໃຊ້ແຕ່ຕົວອັກສອນນ້ອຍ, ຕົວເລກ ແລະ - ແລະລົງທ້າຍດ້ວຍ .jpg, .jpeg, .png ຫຼື .webp';
+
+  @override
+  String get menuAddDuplicate => 'ມີເມນູຊື່ນີ້ໃນໝວດນີ້ແລ້ວ';
+
+  @override
+  String get menuFull => 'ເມນູເຕັມແລ້ວ, ເພີ່ມອີກບໍ່ໄດ້';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'ເພີ່ມແລ້ວ: $name';
+  }
 }

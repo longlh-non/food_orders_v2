@@ -457,4 +457,57 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'QR-код для банковского перевода';
+
+  @override
+  String get menuAddTooltip => 'Добавить блюдо';
+
+  @override
+  String get menuAddTitle => 'Добавить новое блюдо';
+
+  @override
+  String get menuAddAction => 'Добавить';
+
+  @override
+  String get menuAddNameLabel => 'Название';
+
+  @override
+  String get menuAddDescriptionLabel => 'Описание (необязательно)';
+
+  @override
+  String get menuAddCategoryLabel => 'Категория';
+
+  @override
+  String get menuAddCategoryRequired => 'Выберите категорию';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'Разрешить добавки';
+
+  @override
+  String get menuAddImageLabel => 'Имя файла картинки (необязательно)';
+
+  @override
+  String get menuAddImageHelp =>
+      'Файл уже должен лежать в папке с картинками на сервере.';
+
+  @override
+  String get menuAddNameError => 'Введите название, не более 100 символов';
+
+  @override
+  String get menuAddDescriptionError => 'Описание: не более 500 символов';
+
+  @override
+  String get menuAddImageError =>
+      'Недопустимое имя файла. Используйте строчные буквы, цифры и -, окончание .jpg, .jpeg, .png или .webp';
+
+  @override
+  String get menuAddDuplicate =>
+      'Блюдо с таким названием уже есть в этой категории';
+
+  @override
+  String get menuFull => 'Меню заполнено, добавить ещё блюда нельзя';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'Добавлено: $name';
+  }
 }

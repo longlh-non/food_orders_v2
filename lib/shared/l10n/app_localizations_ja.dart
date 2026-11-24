@@ -429,4 +429,55 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get customerQrSemantics => '銀行振込のQRコード';
+
+  @override
+  String get menuAddTooltip => 'メニューを追加';
+
+  @override
+  String get menuAddTitle => '新しいメニューを追加';
+
+  @override
+  String get menuAddAction => '追加';
+
+  @override
+  String get menuAddNameLabel => '名前';
+
+  @override
+  String get menuAddDescriptionLabel => '説明（任意）';
+
+  @override
+  String get menuAddCategoryLabel => 'カテゴリ';
+
+  @override
+  String get menuAddCategoryRequired => 'カテゴリを選んでください';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'トッピングを許可';
+
+  @override
+  String get menuAddImageLabel => '画像ファイル名（任意）';
+
+  @override
+  String get menuAddImageHelp => 'ファイルはサーバーの画像フォルダーにすでに置いてある必要があります。';
+
+  @override
+  String get menuAddNameError => '名前を入力してください（100文字まで）';
+
+  @override
+  String get menuAddDescriptionError => '説明は500文字までです';
+
+  @override
+  String get menuAddImageError =>
+      'ファイル名が正しくありません。小文字、数字、- のみで、末尾は .jpg、.jpeg、.png、.webp にしてください';
+
+  @override
+  String get menuAddDuplicate => 'このカテゴリには同じ名前のメニューがすでにあります';
+
+  @override
+  String get menuFull => 'メニューがいっぱいで、これ以上追加できません';
+
+  @override
+  String menuAddedSnack(String name) {
+    return '追加しました：$name';
+  }
 }

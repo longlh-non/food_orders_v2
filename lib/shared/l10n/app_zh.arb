@@ -122,5 +122,21 @@
   "customerPayExpired": "你的订单支付已超时。要改为现金支付吗？",
   "customerPayTransferUnavailable": "银行转账暂时不可用",
   "customerNewQr": "生成新的二维码",
-  "customerQrSemantics": "银行转账二维码"
+  "customerQrSemantics": "银行转账二维码",
+  "menuAddTooltip": "添加菜品",
+  "menuAddTitle": "添加新菜品",
+  "menuAddAction": "添加",
+  "menuAddNameLabel": "名称",
+  "menuAddDescriptionLabel": "描述（可选）",
+  "menuAddCategoryLabel": "分类",
+  "menuAddCategoryRequired": "请选择分类",
+  "menuAddAllowToppingsLabel": "允许加配料",
+  "menuAddImageLabel": "图片文件名（可选）",
+  "menuAddImageHelp": "该文件必须已在服务器的图片文件夹中。",
+  "menuAddNameError": "请输入名称，最多100个字符",
+  "menuAddDescriptionError": "描述最多500个字符",
+  "menuAddImageError": "文件名无效。只能使用小写字母、数字和 -，以 .jpg、.jpeg、.png 或 .webp 结尾",
+  "menuAddDuplicate": "该分类中已有同名菜品",
+  "menuFull": "菜单已满，无法再添加菜品",
+  "menuAddedSnack": "已添加：{name}"
 }

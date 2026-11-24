@@ -851,6 +851,102 @@ abstract class AppLocalizations {
   /// In vi, this message translates to:
   /// **'Mã QR chuyển khoản'**
   String get customerQrSemantics;
+
+  /// Tooltip of the app bar button that opens the add-item form.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm món'**
+  String get menuAddTooltip;
+
+  /// Title of the add-item form.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm món mới'**
+  String get menuAddTitle;
+
+  /// Button: add the new item to the menu.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thêm'**
+  String get menuAddAction;
+
+  /// Field label: name of the new menu item.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tên món'**
+  String get menuAddNameLabel;
+
+  /// Field label: optional description of the new item.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mô tả (không bắt buộc)'**
+  String get menuAddDescriptionLabel;
+
+  /// Dropdown label: category of the new item.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mục'**
+  String get menuAddCategoryLabel;
+
+  /// Error under the category dropdown: nothing chosen yet.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hãy chọn một mục'**
+  String get menuAddCategoryRequired;
+
+  /// Switch label: the new food can take toppings. Shown only for food.
+  ///
+  /// In vi, this message translates to:
+  /// **'Cho phép thêm topping'**
+  String get menuAddAllowToppingsLabel;
+
+  /// Field label: optional picture file name.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tên tệp ảnh (không bắt buộc)'**
+  String get menuAddImageLabel;
+
+  /// Hint under the picture field: the file must already be in the images folder on the server.
+  ///
+  /// In vi, this message translates to:
+  /// **'Tệp ảnh phải có sẵn trong thư mục ảnh trên máy chủ.'**
+  String get menuAddImageHelp;
+
+  /// Error under the name field: empty, longer than 100 characters, or has control characters.
+  ///
+  /// In vi, this message translates to:
+  /// **'Nhập tên món, tối đa 100 ký tự'**
+  String get menuAddNameError;
+
+  /// Error under the description field: longer than 500 characters or has control characters.
+  ///
+  /// In vi, this message translates to:
+  /// **'Mô tả tối đa 500 ký tự'**
+  String get menuAddDescriptionError;
+
+  /// Error under the picture field: not a valid file name (lowercase letters, digits and -, ending .jpg, .jpeg, .png or .webp).
+  ///
+  /// In vi, this message translates to:
+  /// **'Tên tệp không hợp lệ. Chỉ dùng chữ thường, số và dấu -, đuôi .jpg, .jpeg, .png hoặc .webp'**
+  String get menuAddImageError;
+
+  /// Error: an item with that name already exists in that category.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã có món trùng tên trong mục này'**
+  String get menuAddDuplicate;
+
+  /// Error: the menu already has the most items it can hold.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thực đơn đã đầy, không thêm được món nữa'**
+  String get menuFull;
+
+  /// Snack bar after adding: {name} is the name of the new item.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã thêm: {name}'**
+  String menuAddedSnack(String name);
 }
 
 class _AppLocalizationsDelegate

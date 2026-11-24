@@ -94,7 +94,9 @@ void main() {
       expect(burger['price'], 26000);
     });
 
-    for (final method in ['POST', 'PATCH', 'PUT', 'DELETE']) {
+    // POST /menu is a staff route now (menu_add_test.dart); with no staff gate
+    // on this handler it answers 403, which this loop doesn't pin down.
+    for (final method in ['PATCH', 'PUT', 'DELETE']) {
       test('$method /menu is not allowed', () async {
         final response = await call(handler, method, '/menu');
 
@@ -1212,11 +1214,8 @@ void main() {
       expect(response.statusCode, 401);
     });
 
-    test('POST /menu and DELETE /menu/{id} are still not served', () async {
-      for (final (method, path) in [
-        ('POST', '/menu'),
-        ('DELETE', '/menu/tra-da'),
-      ]) {
+    test('DELETE /menu/{id} is still not served', () async {
+      for (final (method, path) in [('DELETE', '/menu/tra-da')]) {
         final response = await Future.sync(
           () => staff(
             Request(

@@ -35,3 +35,16 @@ written, and the old English was no longer in git, so:
   for ru; only `other` for vi, lo, ja, zh, ko.
 - Order status and payment method names reuse the `status*` / `payment*` keys.
 
+## Menu add form (restaurant-menu-add-form)
+
+16 `menuAdd*` / `menuFull` keys (add button tooltip, the form's title, labels,
+field errors, "duplicate", "menu full", the "Added: {name}" snack bar and the
+confirm button) were added to all 10 files. The category names reuse the
+`customerCategory*` keys; cancel, price and save-failed texts are reused too.
+
+- `vi`: written by the agent in plain Vietnamese, in the style of the existing
+  menu editor texts. **Pending owner acceptance.**
+- `en`: drafted.
+- `zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`: machine-quality drafts,
+  **unverified** (no fluent reader has checked them). No plural messages were
+  added, so Russian needed no `few`/`many` forms.

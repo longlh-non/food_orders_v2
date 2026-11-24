@@ -440,4 +440,56 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get customerQrSemantics => 'Mã QR chuyển khoản';
+
+  @override
+  String get menuAddTooltip => 'Thêm món';
+
+  @override
+  String get menuAddTitle => 'Thêm món mới';
+
+  @override
+  String get menuAddAction => 'Thêm';
+
+  @override
+  String get menuAddNameLabel => 'Tên món';
+
+  @override
+  String get menuAddDescriptionLabel => 'Mô tả (không bắt buộc)';
+
+  @override
+  String get menuAddCategoryLabel => 'Mục';
+
+  @override
+  String get menuAddCategoryRequired => 'Hãy chọn một mục';
+
+  @override
+  String get menuAddAllowToppingsLabel => 'Cho phép thêm topping';
+
+  @override
+  String get menuAddImageLabel => 'Tên tệp ảnh (không bắt buộc)';
+
+  @override
+  String get menuAddImageHelp =>
+      'Tệp ảnh phải có sẵn trong thư mục ảnh trên máy chủ.';
+
+  @override
+  String get menuAddNameError => 'Nhập tên món, tối đa 100 ký tự';
+
+  @override
+  String get menuAddDescriptionError => 'Mô tả tối đa 500 ký tự';
+
+  @override
+  String get menuAddImageError =>
+      'Tên tệp không hợp lệ. Chỉ dùng chữ thường, số và dấu -, đuôi .jpg, .jpeg, .png hoặc .webp';
+
+  @override
+  String get menuAddDuplicate => 'Đã có món trùng tên trong mục này';
+
+  @override
+  String get menuFull => 'Thực đơn đã đầy, không thêm được món nữa';
+
+  @override
+  String menuAddedSnack(String name) {
+    return 'Đã thêm: $name';
+  }
 }
