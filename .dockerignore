@@ -1,0 +1,6 @@
+# Root-context builds (deploy/docker/backup.Dockerfile) send ONLY what that
+# build copies. This also keeps backend/data (customer names) and any secret
+# out of the build context. The backend image is built with backend/ as its
+# context and uses backend/.dockerignore instead.
+*
+!deploy/backup.sh

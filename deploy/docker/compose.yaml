@@ -16,6 +16,9 @@
 #   sudo mkdir -p /var/lib/food-orders/data/images /etc/food-orders
 #   sudo chown -R 10001:10001 /var/lib/food-orders/data     # the image's user
 #   sudo chmod 700 /var/lib/food-orders/data
+#   sudo mkdir -p /var/lib/food-orders/backups              # for the `backup` service
+#   sudo chown 10001:10001 /var/lib/food-orders/backups
+#   sudo chmod 700 /var/lib/food-orders/backups
 #   web builds (deploy/build.sh) copied to /var/www/food-orders/customer and
 #   /var/www/food-orders/restaurant (world-readable)
 # Only 80 and 443 may ever be published. This stack and the systemd stack
@@ -126,6 +129,60 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+
+  # DOCKER9 + DOCKER10: one backup round on request, never started by a plain
+  # `docker compose up` (profile). Run it:
+  #   docker compose -f deploy/docker/compose.yaml run --rm backup
+  # Schedule (the owner installs it; agents never touch crontab), daily 03:30:
+  #   30 3 * * * umask 077; docker compose -f /PATH/TO/deploy/docker/compose.yaml run --rm backup >> /var/log/food-orders-backup.log 2>&1
+  # (umask 077 keeps the log private. Build the image once by hand first, so
+  # cron never runs apt-get unattended: docker compose -f ... --profile tools build backup.
+  # Keep /PATH/TO owned by root: cron runs as root and builds from those files.)
+  # Run it before every backend update (schema steps cannot be undone).
+  # Alternative: sqlite3 on the host running deploy/backup.sh on the same folders.
+  backup:
+    profiles: [tools]
+    build:
+      context: ../..           # repo root: the Dockerfile copies deploy/backup.sh
+      dockerfile: deploy/docker/backup.Dockerfile
+    # NO `ports:`, no `restart:` (a one-shot job).
+    user: "10001:10001"
+    # The script never uses the network: keep this job off the compose network
+    # so it cannot reach backend:3000 around Caddy (the build is unaffected).
+    network_mode: none
+
+    environment:               # none of these is secret
+      ORDERS_DB: /data/orders.db
+      IMAGES_DIR: /data/images
+      BACKUP_DIR: /backups
+      KEEP: "14"
+
+    volumes:
+      # Same folder as the backend. Read-write on purpose: `sqlite3 .backup`
+      # opens the database and needs the folder writable for its side files
+      # (journal / -wal / -shm). UNVERIFIED: that .backup works through the
+      # bind mount while the backend is running (locking across containers).
+      - type: bind
+        source: /var/lib/food-orders/data
+        target: /data
+        bind:
+          create_host_path: false
+      # Backups live on the host, outside the repo, the image and any named
+      # volume that `docker compose down -v` would delete. Owner prepares it
+      # (see HOST PREPARATION).
+      - type: bind
+        source: /var/lib/food-orders/backups
+        target: /backups
+        bind:
+          create_host_path: false
+
+    read_only: true            # UNVERIFIED: that backup.sh needs no other writable path
+    tmpfs:
+      - /tmp:size=16m,mode=1777  # UNVERIFIED whether needed (sqlite3 temp files)
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
 
 volumes:
   caddy_data:
