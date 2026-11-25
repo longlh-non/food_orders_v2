@@ -1,0 +1,123 @@
+# Caddyfile for the Caddy CONTAINER (Docker). Keep in sync by hand with
+# deploy/Caddyfile (the systemd path). Read the long comments there for the
+# reasoning behind the gate, the cross-site guard and the handle/try_files
+# structure; they apply here unchanged.
+#
+# Differences from deploy/Caddyfile, and nothing else:
+#   1. Site addresses come from the environment, not a hardcoded hostname:
+#        CUSTOMER_HOST    default "localhost"
+#        RESTAURANT_HOST  default "restaurant.localhost"
+#      The defaults are local-only names: Caddy never asks a public CA for
+#      them, so a missing value cannot reach the public internet by accident.
+#      Set both to the real hostnames in the server-only env file
+#      (see deploy/docker/caddy.env.example). No real hostname is committed.
+#   2. The upstream is backend:3000 (the compose service name), not
+#      localhost:3000 (inside the Caddy container that would be Caddy itself).
+#   3. The roots are /srv/customer and /srv/restaurant: read-only mounts of
+#      the two web builds (DOCKER4: stock caddy image, no custom image).
+#
+# IMAGE: the compose card must pin the image `caddy:2.6.2`, the version this
+# file was checked with. It therefore keeps the `basicauth` directive (newer
+# Caddy prefers `basic_auth`; if the pin is ever raised, rename it here and in
+# deploy/Caddyfile together, DOCKER5).
+#
+# Automatic HTTPS stays ON: never add `auto_https off`. Certificates are
+# requested automatically once DNS points at the VM and ports 80 and 443
+# reach this container.
+#
+# PERSISTENCE: Caddy's /data volume MUST persist (compose's job, next card).
+# It holds the certificates and the ACME account. Without it every container
+# re-creation requests new certificates and runs into the CA's rate limits.
+# /config can be disposable.
+#
+# ACCESS GATE: FOOD_ORDERS_AUTH_USER and FOOD_ORDERS_AUTH_HASH (bcrypt, from
+# `caddy hash-password`) must be passed to the container, from the server-only
+# env file. Do not leave them unset: with only the hash unset Caddy refuses to
+# load the file; with both unset every request gets 401 (fails closed).
+# Remember single quotes around the hash in the env file, so the $ signs stay.
+# Browser behaviour of the gate is UNVERIFIED until the owner tests it.
+
+(demo_gate) {
+	basicauth {
+		{$FOOD_ORDERS_AUTH_USER} {$FOOD_ORDERS_AUTH_HASH}
+	}
+}
+
+{$CUSTOMER_HOST:localhost} {
+	import demo_gate
+
+	handle_path /api/* {
+		# Refuse cross-site requests (CROSS-SITE note in deploy/Caddyfile).
+		@xsite header Sec-Fetch-Site cross-site
+		respond @xsite 403
+
+		# 64 KB body limit: the only protection once the backend is public.
+		request_body {
+			max_size 64KB
+		}
+		# flush_interval -1: never buffer, so the SSE stream arrives live.
+		reverse_proxy backend:3000 {
+			flush_interval -1
+			# The backend never needs the gate credentials; X-Staff-* pass.
+			header_up -Authorization
+		}
+	}
+
+	# Static build, only for what /api/* did not take. Inside `handle` so the
+	# try_files rewrite cannot touch /api/*. Single-page app: unknown paths
+	# fall back to index.html.
+	handle {
+		root * /srv/customer
+		try_files {path} /index.html
+		file_server
+	}
+
+	# gzip the static build only, never /api/* (SSE must not be compressed).
+	@static not path /api/*
+	encode @static gzip
+
+	# index.html and the service worker must always be re-checked.
+	@nocache path /index.html /flutter_service_worker.js
+	header @nocache Cache-Control "no-cache"
+
+	header X-Content-Type-Options "nosniff"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+	# No framing by other sites (clickjacking).
+	header X-Frame-Options "DENY"
+	header Content-Security-Policy "frame-ancestors 'none'"
+}
+
+{$RESTAURANT_HOST:restaurant.localhost} {
+	import demo_gate
+
+	handle_path /api/* {
+		@xsite header Sec-Fetch-Site cross-site
+		respond @xsite 403
+
+		request_body {
+			max_size 64KB
+		}
+		reverse_proxy backend:3000 {
+			flush_interval -1
+			header_up -Authorization
+		}
+	}
+
+	handle {
+		root * /srv/restaurant
+		try_files {path} /index.html
+		file_server
+	}
+
+	@static not path /api/*
+	encode @static gzip
+
+	@nocache path /index.html /flutter_service_worker.js
+	header @nocache Cache-Control "no-cache"
+
+	header X-Content-Type-Options "nosniff"
+	header Referrer-Policy "strict-origin-when-cross-origin"
+	# No framing by other sites (clickjacking).
+	header X-Frame-Options "DENY"
+	header Content-Security-Policy "frame-ancestors 'none'"
+}
