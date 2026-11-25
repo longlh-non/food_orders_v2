@@ -1,0 +1,132 @@
+# Docker Compose stack: Caddy (the only public door) + the backend.
+# Run from anywhere:  docker compose -f deploy/docker/compose.yaml up -d
+#
+# NOTHING SECRET IS IN THIS FILE. Secrets reach the containers only through
+# `env_file:` to files outside the repo (mode 600, owner root):
+#   /etc/food-orders/backend.env   (see deploy/docker/backend.env.example)
+#   /etc/food-orders/caddy.env     (see deploy/docker/caddy.env.example)
+# Never use `environment:` or `docker run -e` for them (they land in shell
+# history and compose files). Note that `env_file` values also show in
+# `docker inspect`: anyone in the `docker` group is root-equivalent and must
+# stay a short list. Never `${...}` interpolation for anything secret:
+# Compose fills `${...}` from the shell and from a project `.env` file, which
+# must not exist or hold secrets.
+#
+# HOST PREPARATION (the owner runs these; agents never use sudo):
+#   sudo mkdir -p /var/lib/food-orders/data/images /etc/food-orders
+#   sudo chown -R 10001:10001 /var/lib/food-orders/data     # the image's user
+#   sudo chmod 700 /var/lib/food-orders/data
+#   web builds (deploy/build.sh) copied to /var/www/food-orders/customer and
+#   /var/www/food-orders/restaurant (world-readable)
+# Only 80 and 443 may ever be published. This stack and the systemd stack
+# (docs/deploy.md) both want 80/443: run one of them, not both.
+
+name: food-orders
+
+services:
+  backend:
+    # DOCKER7: built on the server from the rsync'ed source.
+    build:
+      context: ../../backend
+    restart: unless-stopped
+
+    # NO `ports:` and NO `network_mode: host`, on purpose. The image listens
+    # on 0.0.0.0 inside the container (BIND_ADDRESS), which is safe only
+    # because nothing publishes it: the 64 KB body limit, the shared-password
+    # gate and the cross-site guard all live in Caddy, so a published 3000
+    # would skip all three. Docker's published ports also bypass ufw. Caddy
+    # reaches it as backend:3000 over the private compose network.
+
+    # Secrets (STAFF_*, SHOP_*, BANK_*): outside the repo, mode 600.
+    env_file:
+      - /etc/food-orders/backend.env
+
+    # DOCKER6: host folders. /var/lib/food-orders/data holds orders.db and
+    # images/ (ORDERS_DB=/data/orders.db and IMAGES_DIR=/data/images from the
+    # image). Must be owned by uid 10001. Survives `docker compose down`.
+    volumes:
+      - type: bind
+        source: /var/lib/food-orders/data
+        target: /data
+        bind:
+          create_host_path: false  # a missing folder is an error, not an empty root-owned one
+
+    # PID 1 reaps children and forwards signals.
+    init: true
+    # The server shuts down on SIGINT only (the image also sets this).
+    stop_signal: SIGINT
+    stop_grace_period: 20s
+
+    # Hardening. Each line says why; the "unverified" ones were not run.
+    read_only: true            # image files can't be changed; only /data (mounted) and /tmp are writable. UNVERIFIED: that the Dart AOT bundle and SQLite need no other writable path.
+    tmpfs:
+      - /tmp:size=16m,mode=1777  # scratch space in case SQLite or the runtime wants it. UNVERIFIED whether needed.
+    cap_drop: [ALL]            # a plain server on port 3000 needs no Linux capability. UNVERIFIED.
+    security_opt:
+      - no-new-privileges:true # a process can't gain privileges through setuid binaries
+    mem_limit: 384m            # 1 GB VM: leaves room for Caddy and the OS. UNVERIFIED that the backend stays under it.
+    logging:
+      driver: json-file
+      options:                 # Docker keeps logs forever by default, and request logs hold order ids
+        max-size: 10m
+        max-file: "3"
+    # healthcheck: inherited from the image (GET /menu every 30 s).
+
+  caddy:
+    image: caddy:2.6.2         # DOCKER5: pinned; the Caddyfile uses `basicauth` (renamed in newer Caddy). No digest yet.
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    # The only published ports. No UDP/HTTP3 (docs/deploy.md 4.2).
+    ports:
+      - "80:80"
+      - "443:443"
+
+    # CUSTOMER_HOST, RESTAURANT_HOST, FOOD_ORDERS_AUTH_USER and
+    # FOOD_ORDERS_AUTH_HASH come ONLY from this file. They cannot be made
+    # "required" in Compose (`${VAR:?}` reads the shell and a project .env,
+    # not env_file). It still fails closed: an EMPTY host makes Caddy refuse to
+    # load the Caddyfile (checked with Caddy 2.6.2); an UNSET host falls back
+    # to the local-only names (localhost, restaurant.localhost), which never
+    # request a public certificate; unset credentials give 401 on every request.
+    env_file:
+      - /etc/food-orders/caddy.env
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - type: bind
+        source: /var/www/food-orders/customer
+        target: /srv/customer
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/www/food-orders/restaurant
+        target: /srv/restaurant
+        read_only: true
+        bind:
+          create_host_path: false
+      - caddy_data:/data       # certificates and ACME account: MUST persist (CA rate limits)
+      - caddy_config:/config
+
+    # Hardening (all UNVERIFIED against Caddy 2.6.2 in this setup).
+    read_only: true            # Caddy writes only to /data and /config (volumes). UNVERIFIED: that it needs no other path.
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    cap_add:
+      - NET_BIND_SERVICE       # bind 80 and 443 inside the container; the only capability kept
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -55,3 +55,6 @@ sample/*.xlsx
 
 #.vscode file
 .vscode/
+
+# Local copies of the Docker env files (hold secrets; the .example files are committed)
+deploy/docker/*.env
