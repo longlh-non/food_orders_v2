@@ -46,6 +46,9 @@ backend/
     ├── report_summary.dart    # the summary .xlsx (sheets gộp and tách)
     ├── report_detail.dart     # the detail .xlsx (one sheet)
     └── xlsx_writer.dart       # a small .xlsx writer used by both reports
+
+deploy/
+└── docker/          # Docker alternative to the systemd path: compose.yaml, Caddyfile, backup.Dockerfile, *.env.example (guide: docs/deploy.md, section "Running with Docker")
 ```
 
 `l10n.yaml` (project root) configures `flutter gen-l10n`: ARB folder `lib/shared/l10n`, template `app_vi.arb`, output `app_localizations.dart`. `pubspec.yaml` has `generate: true`.
@@ -256,7 +259,7 @@ Order rules (enforced by the backend):
 
 Size limits (so one device on the wifi can't fill the backend's memory or disk):
 - **Request bodies over 64 KB are refused by the proxy** (413), not the backend: `request_body { max_size 64KB }` in `dev/Caddyfile` and `client_max_body_size 64k;` in `dev/nginx.conf`, on `/api/*` only. A real order is well under 1 KB.
-  - The limit only protects traffic that goes through the proxy, so **the backend listens on this machine only** (`127.0.0.1:3000`) by default: other devices can't reach port 3000 and get around the limit. Caddy and nginx connect to it on localhost, so nothing else changes. `BIND_ADDRESS=0.0.0.0` overrides this (empty counts as unset); only use it behind a firewall. A firewall that allows only 80/tcp (`sudo ufw status`) is a second layer.
+  - The limit only protects traffic that goes through the proxy, so **the backend listens on this machine only** (`127.0.0.1:3000`) by default: other devices can't reach port 3000 and get around the limit. Caddy and nginx connect to it on localhost, so nothing else changes. `BIND_ADDRESS=0.0.0.0` overrides this (empty counts as unset); only use it behind a firewall. Inside the Docker image it is `0.0.0.0`; the compose file never publishes port 3000, and `ufw` does not guard Docker-published ports (see `docs/deploy.md` 11a.2). A firewall that allows only 80/tcp (`sudo ufw status`) is a second layer.
 - **The backend keeps at most 10,000 orders** and answers 503 "Order storage is full" after that. Old orders are never deleted automatically. To make room: stop the backend, make a dated backup (see "Storage"), then delete old finished orders, e.g. `sqlite3 backend/data/orders.db "DELETE FROM orders WHERE status IN ('delivered', 'cancelled') AND placed_at < '2026-01-01'"`. `GET /orders` returns only the newest 500.
 - **An order** has at most 50 lines, and its id (and every item or topping id) at most 64 characters.
 - **Names and amounts** have the maximums listed in the order rules above. Name lengths count UTF-16 units: a Vietnamese letter is 1, an emoji 2.

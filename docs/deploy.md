@@ -30,7 +30,7 @@ Owner decisions already made (2026-11-13, recorded in `docs/ci-cd-decisions.md`)
 - **HOST1:** the provider (section 3: Oracle or Google).
 - **HOST2:** the domain name (section 6).
 
-Both Caddy and the backend run directly on the VM (no Docker; Docker is a non-goal). Deploys are by hand for now; the automatic deploy cards (`cd-server-deploy-script`, `cd-github-deploy-workflow`) are not built.
+On the systemd path described in sections 5 to 7, Caddy and the backend run directly on the VM, with no Docker. Docker is an **alternative** to that path (decision DOCKER1), described in section 11a; pick one. Deploys are by hand for now; the automatic deploy cards (`cd-server-deploy-script`, `cd-github-deploy-workflow`) are not built.
 
 ---
 
@@ -49,7 +49,7 @@ gate secrets:    /etc/caddy/food-orders-auth.env           (demo user + password
 backups:         /var/lib/food-orders/backups/
 ```
 
-Only ports **22 (SSH), 80 and 443** are ever opened. **Port 3000 is never opened**: the backend listens on `127.0.0.1` only (its default; the unit does not set `BIND_ADDRESS`, and you must never add `BIND_ADDRESS=0.0.0.0`). The proxy is what limits request size to 64 KB and adds the password, so nothing may reach the backend around it.
+Only ports **22 (SSH), 80 and 443** are ever opened. **Port 3000 is never opened**: the backend listens on `127.0.0.1` only (its default; the unit does not set `BIND_ADDRESS`, and for the systemd path you must never add `BIND_ADDRESS=0.0.0.0`; the one exception is inside the Docker image, see section 11a.4). The proxy is what limits request size to 64 KB and adds the password, so nothing may reach the backend around it.
 
 ---
 
@@ -535,6 +535,278 @@ Open follow-ups from the reviews of the Caddy config (P2, not blockers for a dem
 
 ---
 
+## 11a. Running with Docker (alternative to sections 5 to 7)
+
+**Nothing in this section has been run.** No agent ran Docker, `sudo`, or any command below; the files in `deploy/docker/` and `backend/Dockerfile` were written and reviewed, never built or started. Every step is "unverified until you do it" (section 12). The decisions behind it (DOCKER1 to DOCKER10) are in `docs/ci-cd-decisions.md`.
+
+Placeholders are the same as at the top of this guide (`customer.example.com`, `restaurant.example.com`, `SERVER_IP`, `SSH_USER`). Never paste a real password, hash or key into the repo.
+
+### 11a.1 Docker or systemd: pick one
+
+Docker here is an **alternative** to sections 5.1 to 5.8 and 7.2, not a replacement (DOCKER1). The systemd path and its cards stay valid.
+
+| | systemd path (sections 5 to 7) | Docker path (this section) |
+|---|---|---|
+| Caddy | apt package, runs as a service | stock image `caddy:2.6.2` in a container |
+| Backend | built on the VM with `dart build cli`, run by systemd | image built on the VM from `backend/Dockerfile`, run by Compose |
+| Needs on the VM | Caddy and the Dart SDK | Docker Engine only |
+| Data folder | `/var/lib/food-orders/` (user `food-orders`) | `/var/lib/food-orders/data/` (uid 10001) |
+| Secrets | `/etc/food-orders/backend.env`, `/etc/caddy/food-orders-auth.env` | `/etc/food-orders/backend.env`, `/etc/food-orders/caddy.env` |
+
+Both paths want ports **80 and 443**, so run only one of them on a machine. If you switch, stop and disable the other first (`sudo systemctl disable --now caddy food-orders-backend` for the systemd path) and copy the database and pictures across by hand after a backup. Sections 1 to 4, 6 (DNS), 8 (checks), 10 and 11 apply to both.
+
+The Docker files:
+
+```
+backend/Dockerfile                  the backend image (build: dart:3.14.0, run: debian:bookworm-slim, user uid 10001)
+backend/.dockerignore               keeps backend/data/ and secrets out of the build
+deploy/docker/compose.yaml          the stack: backend, caddy, and the one-shot backup (profile "tools")
+deploy/docker/Caddyfile             same rules as deploy/Caddyfile, hostnames from the environment, upstream backend:3000
+deploy/docker/backup.Dockerfile     the backup image (runs deploy/backup.sh unchanged)
+deploy/docker/backend.env.example   names and fake values for /etc/food-orders/backend.env
+deploy/docker/caddy.env.example     names and fake values for /etc/food-orders/caddy.env
+.dockerignore                       the backup build may only see deploy/backup.sh
+```
+
+`deploy/docker/Caddyfile` is kept in sync **by hand** with `deploy/Caddyfile`. If you change the gate, the cross-site guard or the body limit in one, change the other.
+
+### 11a.2 Install Docker Engine (DOCKER8: your job, official repository)
+
+On the VM, follow Docker's **official** page for your Ubuntu version ("Install Docker Engine on Ubuntu", https://docs.docker.com/engine/install/ubuntu/), the "Install using the apt repository" method. Check the repository's signing-key fingerprint against the one on that page, and never pipe a downloaded script into a shell (`curl ... | sh`). You need the Engine and the **Compose v2 plugin** (`docker compose`, with a space). Then:
+
+```bash
+sudo docker version
+sudo docker compose version
+```
+
+Do not add your login to the `docker` group: anyone in it is root-equivalent. This guide runs every Docker command with `sudo`.
+
+**Warning: Docker bypasses `ufw`.** A port that a container publishes is opened by Docker's own firewall rules, which are evaluated before `ufw`'s. So `sudo ufw status` showing only 22, 80 and 443 does **not** prove that port 3000 is closed. The protection is that the compose file never publishes it (11a.4), and the check is a request from another machine (11a.7). Only **80 and 443** may ever be published. Never run `docker run -P`, `-p 3000:3000`, or `network_mode: host` for the backend. (Whether Docker's rules and Oracle's built-in `iptables` rules (3.1) interact badly is unverified; read the iptables note in 3.1 first.)
+
+### 11a.3 Folders, ownership and the two env files (on the VM)
+
+The backend container runs as uid **10001** and `compose.yaml` mounts the host folders below. A missing folder is an error on purpose (`create_host_path: false`), so create them first:
+
+```bash
+sudo mkdir -p /var/lib/food-orders/data/images /var/lib/food-orders/backups /etc/food-orders
+sudo chown -R 10001:10001 /var/lib/food-orders/data
+sudo chown 10001:10001 /var/lib/food-orders/backups
+sudo chmod 700 /var/lib/food-orders/data /var/lib/food-orders/backups
+sudo mkdir -p /var/www/food-orders/customer /var/www/food-orders/restaurant
+sudo chown -R "$USER":"$USER" /var/www/food-orders
+sudo mkdir -p /opt/food-orders-src
+```
+
+Consequence: the data and backups folders belong to uid 10001 and are mode 700, so **you** cannot read them without `sudo`. Copying a picture needs `sudo cp`, and `sqlite3` on the database runs as `sudo -u '#10001'` (11a.9). Those are your commands on the VM; this guide's examples show them, an agent never runs them.
+
+**`/etc/food-orders/backend.env`** (mode 600, owned by root: Compose reads it as root, unlike the systemd path where `food-orders` owns it). Create it empty first, then edit (**only the first time**: `install` from `/dev/null` overwrites an existing file with an empty one, so if the file already exists use `sudoedit` alone):
+
+```bash
+sudo install -m 600 -o root -g root /dev/null /etc/food-orders/backend.env
+sudoedit /etc/food-orders/backend.env
+```
+
+Variable **names** (copy the layout from `deploy/docker/backend.env.example`; the rules for each value are in 5.5 and `CLAUDE.md` "Staff ID and password" and "Shop and bank settings"):
+
+```
+STAFF_ID=
+STAFF_PASSWORD=
+# optional: SHOP_NAME, SHOP_TAX_CODE, SHOP_ADDRESS, SHOP_LOCATION, SHOP_REPRESENTATIVE
+# optional: BANK_BIN, BANK_ACCOUNT, BANK_ACCOUNT_NAME, BANK_NAME
+```
+
+- The example file ships `STAFF_PASSWORD=CHANGE-ME`, which is deliberately too short: if you forget to replace it, the staff routes stay off (403) instead of running with a published password.
+- **Avoid `$` and ` #` (a space then a hash) in the values.** Compose reads `$` as a variable and ` #` as a comment. `openssl rand -hex 12` output is safe. If a value needs a `$`, wrap it in single quotes.
+- Do **not** set `BIND_ADDRESS`, `ORDERS_DB` or `IMAGES_DIR` here: the image sets them.
+- `env_file` values are visible in `sudo docker inspect`, so keep the `docker` group empty or a very short list.
+
+**`/etc/food-orders/caddy.env`** (mode 600, root). Variable names: `CUSTOMER_HOST`, `RESTAURANT_HOST`, `FOOD_ORDERS_AUTH_USER`, `FOOD_ORDERS_AUTH_HASH`. Make the hash with the same Caddy version the stack runs (it asks for the password at a prompt, twice; copy the line that starts with `$2a$`):
+
+```bash
+sudo docker run --rm -it caddy:2.6.2 caddy hash-password
+# First time only: this empties an existing file. If caddy.env exists, use sudoedit alone.
+sudo install -m 600 -o root -g root /dev/null /etc/food-orders/caddy.env
+sudoedit /etc/food-orders/caddy.env
+```
+
+```
+CUSTOMER_HOST=customer.example.com
+RESTAURANT_HOST=restaurant.example.com
+FOOD_ORDERS_AUTH_USER=demo
+FOOD_ORDERS_AUTH_HASH='$2a$14$...the line you copied...'
+```
+
+**The `$` in the bcrypt hash:** the hash is wrapped in single quotes. The expectation is that single quotes keep `$` literal in Compose v2 `env_file` and that the file is passed with `env_file:` and never interpolated. This is **unverified** until you run `sudo docker compose -f deploy/docker/compose.yaml config --quiet` (no error; `--quiet` so no value is printed) and log in to the real site with the real password. If login fails with the right password, suspect this first. The gate password here is the shared website password (5.6); the staff password is a different one. Use a long random one (20 or more characters) and set up `fail2ban` or an equivalent as in 5.9 (the Caddy log reaches `docker logs`, not a file, so the jail needs adapting; unverified).
+
+If both Caddy credentials are unset every request gets 401; an unset hostname falls back to the local-only names `localhost` and `restaurant.localhost`, which never ask a public CA for a certificate.
+
+### 11a.4 `BIND_ADDRESS` inside the container (the one exception)
+
+The backend normally listens on `127.0.0.1` only, and section 2 and the unit file `deploy/food-orders-backend.service` say never to set `BIND_ADDRESS=0.0.0.0`. **For the systemd path that stays true.** In Docker the image sets `BIND_ADDRESS=0.0.0.0` (in `backend/Dockerfile`), because the Caddy container reaches the backend over the private Compose network and cannot reach a loopback-only server. That is safe **only** because the `backend` service in `compose.yaml` has **no `ports:` and no host networking**: nothing outside Docker can reach port 3000. The 64 KB body limit, the shared password and the cross-site guard all live in Caddy, so a published port 3000 would skip all three. **Never add `ports:` to the backend service**, never use `-p 3000:3000` or `docker run -P` on that image, and keep your own override files from doing it.
+
+### 11a.5 First install
+
+**On your laptop**, from the project root. Send the source (the same excludes as 5.4) and the first web builds. The trailing `/` rules of 7.1 apply; `--delete` only on these exact target folders:
+
+```bash
+ssh -i ~/.ssh/food_orders_vm SSH_USER@SERVER_IP 'sudo mkdir -p /opt/food-orders-src'
+rsync -a --delete --exclude data/ --exclude .dart_tool/ --exclude build/ \
+  --chown=root:root --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/food_orders_vm" backend/ SSH_USER@SERVER_IP:/opt/food-orders-src/backend/
+rsync -a --delete --chown=root:root --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/food_orders_vm" deploy/ SSH_USER@SERVER_IP:/opt/food-orders-src/deploy/
+rsync -a --chown=root:root --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/food_orders_vm" .dockerignore SSH_USER@SERVER_IP:/opt/food-orders-src/.dockerignore
+
+export PATH="$HOME/development/flutter/bin:$PATH"
+deploy/build.sh
+test -f build/customer/index.html && test -f build/restaurant/index.html && \
+rsync -a --delete --chmod=D755,F644 -e "ssh -i ~/.ssh/food_orders_vm" build/customer/   SSH_USER@SERVER_IP:/var/www/food-orders/customer/ && \
+rsync -a --delete --chmod=D755,F644 -e "ssh -i ~/.ssh/food_orders_vm" build/restaurant/ SSH_USER@SERVER_IP:/var/www/food-orders/restaurant/
+```
+
+**On the VM.** The source folder must stay owned by root (the cron job in 11a.8 builds from it as root):
+
+```bash
+sudo chown -R root:root /opt/food-orders-src
+cd /opt/food-orders-src
+sudo docker compose -f deploy/docker/compose.yaml config --quiet     # checks the file and the env files; prints nothing when fine
+sudo docker compose -f deploy/docker/compose.yaml build              # the backend image (the first build downloads a precompiled SQLite: needs network)
+sudo docker compose -f deploy/docker/compose.yaml --profile tools build backup
+sudo docker compose -f deploy/docker/compose.yaml up -d
+sudo docker compose -f deploy/docker/compose.yaml ps
+sudo docker compose -f deploy/docker/compose.yaml logs --tail 30 backend
+```
+
+Notes:
+- **At the first real build, check two things in `backend/Dockerfile` and the backup image:** that the tag `dart:3.14.0` exists (it was never looked up), and which Debian release that Dart image is built on. If it is newer than `bookworm`, the bundle may fail with `GLIBC_x.y not found` in the run stage; then use the matching Debian there. The base images are **not pinned by digest yet** (DOCKER2): once the first build works, pin the digests you tested.
+- `caddy:2.6.2` is a **November 2022** release. It is used because the Caddyfile uses `basicauth` (DOCKER5), and it is an **accepted risk**: it gets no fixes. **Revisit by 2027-03-01:** move to a current 2.x, and rename `basicauth` to `basic_auth` in **both** `deploy/Caddyfile` and `deploy/docker/Caddyfile` in the same change. The image is not pinned by digest either.
+- The backend log should say `staff routes: enabled`. A request line for `GET /menu` appears every 30 seconds: that is the image's health check, not a visitor.
+- `caddy` starts only after `backend` is healthy (up to about a minute on a fresh start).
+- On a 1 GB machine the image build may run out of memory; add the swap file from 5.4 first.
+- `compose.yaml` hardens the containers (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`, memory limits, `init`). **Whether the Dart bundle, SQLite and Caddy 2.6.2 run under those options is unverified.** If a container will not start, `docker compose logs` says why; relax one option at a time in your server copy and tell the maintainer.
+- **Never run `docker compose down -v`**: `-v` deletes the `caddy_data` volume (certificates and the ACME account), and the certificate authority rate-limits re-requests. Plain `down` is fine; your database is in a host folder, not a volume. To stop without removing: `docker compose ... stop`.
+
+### 11a.6 Releases
+
+**Web-only release (no restart).** Same as 7.1 (build, then the two guarded `rsync` lines to `/var/www/food-orders/...`). Caddy reads the files from read-only mounts of those folders on each request, so nothing is restarted. Tell staff to hard-reload (see 7.1). Unverified: that a mounted folder shows `rsync --delete` changes at once.
+
+**Backend release (only when `backend/` changed).** A new schema step runs when the new backend starts and **cannot be undone**, so **run the backup first, before every backend update**:
+
+```bash
+# 1. On the VM: backup first (11a.8)
+cd /opt/food-orders-src
+sudo docker compose -f deploy/docker/compose.yaml run --rm backup
+sudo ls -l /var/lib/food-orders/backups
+```
+
+```bash
+# 2. On your laptop: send the new source (the three rsync lines of 11a.5). Web builds too, from the SAME revision.
+# 3. On the VM: build (the running backend keeps running), then replace it
+cd /opt/food-orders-src
+sudo docker compose -f deploy/docker/compose.yaml build backend
+sudo docker compose -f deploy/docker/compose.yaml up -d backend
+sudo docker compose -f deploy/docker/compose.yaml logs --tail 30 backend
+sudo docker compose -f deploy/docker/compose.yaml ps
+```
+
+**Rollback = rebuild the previous revision.** Check out the previous tag or commit on your laptop, send that source (the rsync lines of 11a.5), then `build backend` and `up -d backend` again. **This restores the program only, not the database** (as in 7.2): if the new version already ran a schema step, restore the backup from step 1 (11a.8).
+
+**Changing a config file:**
+- `backend.env` changed: `sudo docker compose -f deploy/docker/compose.yaml up -d --force-recreate backend`.
+- `caddy.env` or the Caddyfile changed: `sudo docker compose -f deploy/docker/compose.yaml up -d --force-recreate caddy`. A plain `restart` may keep reading an old copy of the Caddyfile, because `rsync` replaces the file and the container mounts that one file. Unverified.
+
+### 11a.7 Checks (the section 8 list, adapted)
+
+All **unverified until you do them**:
+
+1. `sudo docker compose -f deploy/docker/compose.yaml ps`: `backend` is `healthy`, `caddy` is running, `backup` is not listed (it only runs on request).
+2. Items 1 and 2 of section 8 unchanged: `curl -sI https://customer.example.com/` is **401** without a login and **200** with it (`curl -sI -u demo https://customer.example.com/`), the same for the restaurant host, and `http://` redirects to `https://`. A first start fetches certificates, which needs DNS (6) to be right: `sudo docker compose -f deploy/docker/compose.yaml logs --tail 50 caddy`.
+3. **Port 3000 is closed.** On the VM, `sudo ss -ltnp | grep 3000` must print **nothing** (in the systemd path it showed `127.0.0.1:3000`; here the backend is inside Docker and nothing is published). `sudo docker ps --format '{{.Names}}  {{.Ports}}'` must show the backend with `3000/tcp` and **no** `->` arrow; only `caddy` may show `0.0.0.0:80->80/tcp` and `0.0.0.0:443->443/tcp`. Then, from a **different machine or network** (a phone on mobile data): `curl -m 5 http://SERVER_IP:3000/menu` **must fail or time out**. If it answers, stop everything (`sudo docker compose -f deploy/docker/compose.yaml stop`) and fix the compose file before anything else. Remember that `ufw status` is not proof (11a.2).
+4. Section 8 items 4 and 6 unchanged (phone on mobile data, order appears live, staff login works).
+5. Orders survive `sudo docker compose -f deploy/docker/compose.yaml restart backend` and a full `sudo reboot` (both services have `restart: unless-stopped`, and Docker itself starts at boot: check `systemctl is-enabled docker`).
+6. A photo copied as in 11a.9 shows on the menu over HTTPS.
+7. A backup is created and a restore rehearsed (11a.8).
+
+### 11a.8 Backups and restore (DOCKER9, DOCKER10)
+
+The `backup` service in `compose.yaml` runs the same `deploy/backup.sh` in a small image (it has `sqlite3`; the backend image has none). One run writes a matching pair into `/var/lib/food-orders/backups/` (`orders-DATE.db` and `images-DATE.tar.gz`, last 14 kept, mode 600, owned by uid 10001, customer names inside). It has no network and is never started by `up`. It was built in 11a.5; run it any time:
+
+```bash
+cd /opt/food-orders-src
+sudo docker compose -f deploy/docker/compose.yaml run --rm backup
+sudo ls -l /var/lib/food-orders/backups
+```
+
+Unverified: that `sqlite3 .backup` through the bind mount is safe while the backend is running (locking across containers). Run the first one at a quiet moment and rehearse the restore.
+
+**Schedule it (DOCKER10, host cron).** Root's crontab, daily at 03:30 server time. Build the image **once by hand first** (the `--profile tools build backup` line in 11a.5), so cron never runs `apt-get` unattended. Keep `/opt/food-orders-src` owned by root, because cron runs as root and builds from those files if the image is missing.
+
+```bash
+sudo crontab -e
+```
+
+```
+30 3 * * * umask 077; docker compose -f /opt/food-orders-src/deploy/docker/compose.yaml run --rm backup >> /var/log/food-orders-backup.log 2>&1
+```
+
+`umask 077` keeps the log private. Check the next day with `sudo tail -n 20 /var/log/food-orders-backup.log` and `sudo ls -l /var/lib/food-orders/backups`. **Unverified until you see the files appear.** An alternative with no backup image: `sqlite3` installed on the host (4.2) and `deploy/backup.sh` run as root with `ORDERS_DB=/var/lib/food-orders/data/orders.db IMAGES_DIR=/var/lib/food-orders/data/images BACKUP_DIR=/var/lib/food-orders/backups`; its files would then be owned by root, so the folder would no longer match what the compose service expects. Pick one way.
+
+**Copy backups off the VM** (as 9.3; the folder is owner-only, so the remote `rsync` uses `sudo`):
+
+```bash
+# On your laptop:
+install -d -m 700 ~/food-orders-backups
+rsync -av --rsync-path="sudo rsync" -e "ssh -i ~/.ssh/food_orders_vm" SSH_USER@SERVER_IP:/var/lib/food-orders/backups/ ~/food-orders-backups/
+```
+
+**Restore rehearsal** (only reads; replace the date part with real file names):
+
+```bash
+# On the VM:
+cd / && sudo -u '#10001' sqlite3 -readonly /var/lib/food-orders/backups/orders-2026-11-22-033000.db "PRAGMA integrity_check; PRAGMA user_version; SELECT count(*) FROM orders;"
+sudo tar -tzf /var/lib/food-orders/backups/images-2026-11-22-033000.tar.gz | head
+```
+
+**Real restore, by hand** (only when you need it; there is no restore script). Stop the backend container, put the matching pair into the host folders, fix the ownership to uid 10001, start it:
+
+```bash
+cd /opt/food-orders-src
+sudo docker compose -f deploy/docker/compose.yaml stop backend
+sudo cp -p /var/lib/food-orders/data/orders.db /var/lib/food-orders/data/orders.before-restore.db
+sudo install -m 600 -o 10001 -g 10001 /var/lib/food-orders/backups/orders-2026-11-22-033000.db /var/lib/food-orders/data/orders.db
+sudo rm -f /var/lib/food-orders/data/orders.db-wal /var/lib/food-orders/data/orders.db-shm /var/lib/food-orders/data/orders.db-journal
+sudo tar -xzf /var/lib/food-orders/backups/images-2026-11-22-033000.tar.gz -C /var/lib/food-orders/data --no-same-owner
+sudo chown -R 10001:10001 /var/lib/food-orders/data
+sudo chmod 700 /var/lib/food-orders/data
+sudo docker compose -f deploy/docker/compose.yaml up -d backend
+```
+
+Use the matching pair (same timestamp). The `cp -p` line errors harmlessly if there is no database yet. The archive's top folder is `images`, so it lands in `/var/lib/food-orders/data/images`; pictures that are not in the archive stay where they were. If the backup is from an older schema, the backend upgrades it on start. Losing the whole VM: as section 10, but with these Docker paths and `caddy.env` also recreated by hand (it is in no backup).
+
+### 11a.9 Photos and menu edits with `sqlite3` (on the host paths)
+
+The data folder is mode 700 and owned by uid 10001, so you use `sudo`; the `sqlite3` commands run as that uid so the files keep the right owner. Names and sizes: `CLAUDE.md` "Editing the menu". Take a backup before bigger edits (11a.8).
+
+```bash
+# On your laptop:
+rsync -av -e "ssh -i ~/.ssh/food_orders_vm" ./photos/ SSH_USER@SERVER_IP:~/photos/
+# On the VM:
+sudo cp ~/photos/xoi-thit.webp /var/lib/food-orders/data/images/
+sudo chown 10001:10001 /var/lib/food-orders/data/images/xoi-thit.webp
+sudo -u '#10001' sqlite3 /var/lib/food-orders/data/orders.db "UPDATE menu_items SET image = 'xoi-thit.webp' WHERE id = 'xoi-thit'"
+```
+
+Other edits are the same: prefix the `sqlite3` command with `sudo -u '#10001'` and use `/var/lib/food-orders/data/orders.db`. The staff-only `PATCH /menu/{id}` and `POST /menu` routes work as before. (Running `sqlite3` on a database a container has open is the same as on the systemd path: SQLite handles it, and the backend waits up to 2 s for your write.)
+
+### 11a.10 Extra caveats of the Docker path
+
+- **Port 3000 is never published; Docker bypasses `ufw`.** Said above, repeated because it is the one mistake that removes the protection.
+- **`backend.env` ownership differs:** root-owned for Docker, `food-orders`-owned for systemd. Do not point the systemd unit and Compose at the same file without checking the owner.
+- **The cross-site guard has the same limits as in section 11**, including that a hostile page on a sibling subdomain calls the other host as `same-site` and is not refused.
+- **`docker` group is root-equivalent**, and `env_file` values show in `docker inspect`.
+- **Logs:** Docker keeps 3 files of 10 MB per container for the backend and Caddy (`compose.yaml`); the backend log holds order ids. The backup job writes to `/var/log/food-orders-backup.log` (cron redirect).
+- **Not verified, all of it:** every command above; that `dart:3.14.0` exists and its Debian release matches `bookworm-slim` for the bundle; the hardening options (`read_only`, `cap_drop`, `tmpfs`, `mem_limit`) against the Dart bundle, SQLite and Caddy 2.6.2; `$` in the bcrypt hash through `env_file`; `sqlite3 .backup` across the bind mount; Docker's firewall rules together with `ufw` and Oracle's `iptables`; the ARM versus x86 image build; browser behaviour behind the gate.
+
+---
+
 ## 12. Acceptance status
 
 | Item | Status |
@@ -545,3 +817,9 @@ Open follow-ups from the reviews of the Caddy config (P2, not blockers for a dem
 | Orders survive a service restart and a reboot | **unverified** |
 | Port 3000 closed from outside, 80 redirects to 443 | **unverified** |
 | Backup created and restore rehearsed | **unverified** |
+| Docker path: image builds (`dart:3.14.0` tag exists, bundle runs on `bookworm-slim`), stack starts, backend `healthy` | **unverified** (files written, not run) |
+| Docker path: login to the gate works with the `$2a$` hash read from `env_file` (single quotes) | **unverified** |
+| Docker path: port 3000 not reachable from another machine, only 80 and 443 published (`ufw status` is no proof) | **unverified** |
+| Docker path: hardening options (`read_only`, `cap_drop`, `tmpfs`, `mem_limit`) work with the Dart bundle, SQLite and Caddy 2.6.2 | **unverified** |
+| Docker path: `docker compose run --rm backup` makes a pair, cron runs it, restore rehearsed and a real restore tried | **unverified** |
+| Docker path: orders survive a container restart and a reboot | **unverified** |

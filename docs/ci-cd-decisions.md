@@ -54,6 +54,27 @@ The GitHub remote is `origin` → `github.com/longlh-non/food_orders` (checked 2
 | HOST3 | The public demo is gated by one shared username and password (Caddy `basic_auth`) on both sites (option A in `deploy-demo-access-gate`). | The app has no real login. It isn't per-customer auth; the password is shared and only travels over HTTPS. |
 | HOST5 | Backups: yes. `deploy/backup.sh` backs up the database and the images folder, with a restore rehearsal in the runbook. | The server holds the only copy of orders and photos. |
 
+### Docker alternative (owner decisions, 2026-11-25)
+
+Docker is an optional second way to run the server. The step-by-step guide is `docs/deploy.md` section 11a. **Nothing was run by an agent: files written, not run.**
+
+| # | Decision | Why |
+|---|---|---|
+| DOCKER1 | Docker is an **alternative** to the systemd path, not a replacement. The `cd-*` cards stay valid. | The systemd path is already documented and reviewed. |
+| DOCKER2 | Base images `dart:3.14.0` (build stage) and `debian:bookworm-slim` (run stage). Approved, **not digest-pinned yet**. | Same Dart version as development. Pin the digests after the first working build, and check the Dart image's Debian release against `bookworm`. |
+| DOCKER3 | The Dockerfile is `backend/Dockerfile`. | The build context is the backend folder, so the customer-data folder stays out. |
+| DOCKER4 | Caddy runs from the stock `caddy` image, with read-only mounts of the two web builds. No custom image. | Nothing to build or keep up to date. |
+| DOCKER5 | Caddy pinned to `2.6.2`, which keeps `basicauth`. A November 2022 release: **accepted risk**, revisit by 2027-03-01, then move to a current 2.x and rename `basicauth` to `basic_auth` in **both** Caddyfiles together. | The Caddyfiles were checked on 2.6.2. |
+| DOCKER6 | Data lives in host-folder bind mounts (`/var/lib/food-orders/data`, `/var/lib/food-orders/backups`), owned by uid 10001. | Survives `docker compose down`; plain files to back up and copy. |
+| DOCKER7 | The backend image is built on the server from the rsync'ed source. | No registry, no extra account; the CPU architecture matches by construction. |
+| DOCKER8 | Installing Docker Engine is the owner's job, from Docker's official apt repository. | Agents never use `sudo`. |
+| DOCKER9 | Backups run in a small `backup` container (profile `tools`) that runs `deploy/backup.sh` unchanged. | The backend image has no `sqlite3`. |
+| DOCKER10 | The backup is scheduled by the host's cron, on request of the owner. | Simple and visible. |
+
+Carried-over cautions (from the Docker reviews): never publish port 3000 (no `-P`, no `-p 3000:3000`, no host networking), and Docker bypasses `ufw`; never `docker compose down -v` (deletes `caddy_data`); run the backup before every backend update (schema step 8 cannot be undone); restore is by hand; the `docker` group is root-equivalent and `env_file` values show in `docker inspect`. **Open:** digest pinning, the Caddy upgrade date above, and whether the hardening options work with the Dart bundle (all unverified).
+
+HOST1 (provider) and HOST2 (domain) stay open.
+
 ## Still open (blocks cards 3 and 4)
 
 These had no single recommendation, so "all recommended" doesn't settle them:

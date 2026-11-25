@@ -487,6 +487,8 @@ Run these from the project folder. `make check` runs them all, in the same order
 
 **Deploy guide:** the step-by-step server guide is `docs/deploy.md` (written, **not yet followed on a real VM, so unverified**). It covers the VM, firewall, Caddy and the shared password, the backend service, DNS, releases and backups. Going to the public internet is covered there; this runbook is for your own machine.
 
+**Docker alternative:** `docs/deploy.md` section 11a ("Running with Docker") describes running Caddy and the backend in containers instead of the systemd setup, using the files in `deploy/docker/` and `backend/Dockerfile`. Status: **files written, not run** (no agent ran Docker; unverified until you do it). Pick one path per machine.
+
 **Automatic CD is not built yet.** CI builds both web apps and compile-checks the backend (section 7, unverified until pushed and run on GitHub), but nothing is deployed from it; releases are by hand as in `docs/deploy.md`. Note the backend is built with `dart build cli` (not `dart compile exe`), on the VM, so its CPU architecture matches. HOST1 (provider) and HOST2 (domain) are still open owner decisions. The decisions so far are in `docs/ci-cd-decisions.md`. The cards in `docs/tasks/`:
 
 | Card | What it adds |
