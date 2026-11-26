@@ -73,13 +73,19 @@ Docker is an optional second way to run the server. The step-by-step guide is `d
 
 Carried-over cautions (from the Docker reviews): never publish port 3000 (no `-P`, no `-p 3000:3000`, no host networking), and Docker bypasses `ufw`; never `docker compose down -v` (deletes `caddy_data`); run the backup before every backend update (schema step 8 cannot be undone); restore is by hand; the `docker` group is root-equivalent and `env_file` values show in `docker inspect`. **Open:** digest pinning, the Caddy upgrade date above, and whether the hardening options work with the Dart bundle (all unverified).
 
-HOST1 (provider) and HOST2 (domain) stay open.
+### Provider (decided 2026-11-25)
+
+| # | Decision | Why |
+|---|---|---|
+| HOST1 | The provider is **DigitalOcean** (a Droplet), run with the Docker path. The walkthrough is `docs/deploy.md` section 11b (what runs where, the checklist before each deployment, domain setup). Prices and any trial credit are **not** recorded here: check them on DigitalOcean's site. | Owner's choice. Oracle and Google (deploy.md 3.1, 3.2) stay documented for reference. Nothing was run on DigitalOcean by an agent: unverified. |
+
+HOST2 (domain) stays open: `docs/deploy.md` 11b.3 offers a free DuckDNS name as the default and a bought domain as the alternative; the owner picks one.
 
 ## Still open (blocks cards 3 and 4)
 
 These had no single recommendation, so "all recommended" doesn't settle them:
 
-- **HOST1, provider:** Oracle Cloud Always Free or Google Cloud e2-micro (both described in `deploy-runbook`). It decides **D5**.
+- **HOST1, provider:** decided 2026-11-25: DigitalOcean (see above). It still decides **D5** (the CPU architecture of the Droplet plan chosen: x86_64 or ARM, check the plan; with Docker the image is built on the Droplet, so it matches by construction).
 - **D5, CPU architecture of the backend program:** GitHub's normal runners and Google e2-micro are x86_64, but Oracle Ampere is ARM.
   - Recommendation once HOST1 is known: x86_64 → compile on `ubuntu-latest`; ARM → compile on the `ubuntu-24.04-arm` runner, or on the server.
   - Until then, `ci-build-artifacts` only checks that the backend compiles.

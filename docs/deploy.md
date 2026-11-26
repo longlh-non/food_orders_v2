@@ -1,5 +1,7 @@
 # Deploy guide: food_orders on a free always-on VM
 
+> Note (2026-11-25): HOST1 is now **DigitalOcean**, which is a paid Droplet, not a free always-on VM. The "free VM" wording in this title and in section 1 is the original decision record, kept as written (apart from two pointers to DigitalOcean); for the chosen provider read 3.3 and 11b.
+
 This is the owner's step-by-step guide to put the customer and restaurant apps on the public internet. **Nothing here has been run by an agent.** Agents cannot create cloud accounts, run `sudo`, or reach a server. Every step is "unverified" until you have done it on the real VM (see section 12).
 
 Related: `docs/runbook-local.md` (running on your own laptop; section 8 there is the deploy status), `docs/ci-cd-decisions.md` (decisions), and the files in `deploy/` that this guide uses: `Caddyfile`, `food-orders-backend.service`, `build.sh`, `backup.sh`.
@@ -20,14 +22,14 @@ The app needs three things at once: the server must be **always on** (the restau
 | Railway | A one-time trial, not a free tier. |
 | Fly.io | No free tier for new organizations. |
 | Koyeb free | Scales to zero and has no volume. |
-| **Always-free VM (Oracle Cloud Always Free, Google Cloud e2-micro)** | Always on, real disk, you control the process. This is the chosen kind of hosting. |
+| **Always-free VM (Oracle Cloud Always Free, Google Cloud e2-micro)** | Always on, real disk, you control the process. This was the chosen kind of hosting on 2026-11-09; HOST1 later became DigitalOcean (see the note under the title and 3.3). |
 
 Owner decisions already made (2026-11-13, recorded in `docs/ci-cd-decisions.md`):
 - **HOST3 = A:** one shared username and password (Caddy basic auth) on both sites. This is not per-user login.
 - **HOST5 = backups yes:** database and pictures, with a restore rehearsal (section 9).
 
 **Still open, the owner decides:**
-- **HOST1:** the provider (section 3: Oracle or Google).
+- **HOST1:** decided on 2026-11-25: **DigitalOcean** (section 3.3 and 11b). Oracle and Google (3.1, 3.2) stay as written, for reference.
 - **HOST2:** the domain name (section 6).
 
 On the systemd path described in sections 5 to 7, Caddy and the backend run directly on the VM, with no Docker. Docker is an **alternative** to that path (decision DOCKER1), described in section 11a; pick one. Deploys are by hand for now; the automatic deploy cards (`cd-server-deploy-script`, `cd-github-deploy-workflow`) are not built.
@@ -53,7 +55,7 @@ Only ports **22 (SSH), 80 and 443** are ever opened. **Port 3000 is never opened
 
 ---
 
-## 3. Provider steps (HOST1: owner decides)
+## 3. Provider steps (HOST1: DigitalOcean, see 3.3)
 
 **Pick one.** The choice also decides the CPU architecture, which matters because the backend is built **on the VM** (section 5.4): Oracle's free ARM machines (Ampere) are **arm64**; Google's e2-micro is **x86_64**. A program built on one does not run on the other. The web builds are plain files and do not care.
 
@@ -85,6 +87,10 @@ All facts below are **second-hand and dated 2026-11-09. Confirm limits, regions 
   4. Add your SSH **public** key in the VM's "SSH keys" metadata (step 4.1).
   5. Optional but recommended: reserve a static external IP (VPC network > IP addresses), after reading its price on the official pricing page. Without it, the address may change whenever the VM restarts and you must update DNS.
   6. Note the external IP (`SERVER_IP`).
+
+### 3.3 DigitalOcean (chosen as HOST1, 2026-11-25)
+
+The owner chose a DigitalOcean Droplet. It is not an always-free VM: check DigitalOcean's current plans, prices and any trial credit on their site before you create the account. The step-by-step walkthrough, with Docker, a checklist for every deployment and the domain setup, is **section 11b**. Per 11a.1, sections 1 to 4, 6, 8 and 11 apply as written (use the Docker version of the checks, 11a.7); section 9 is replaced by 11a.8 (Docker backups); section 10 is Oracle-specific (keep-alive), and only its "lost VM" part carries over, with the Docker paths of 11a.8. Sections 5.5, 5.6 and 5.9 are still read as references (value rules, gate password, slowing guessing). Sections 5 and 7 are the systemd path and are not used, except the swap file of 5.4 and the web build of 7.1. The Docker file paths are in 11a. The first-install order is in 11b.1.
 
 ---
 
@@ -553,7 +559,7 @@ Docker here is an **alternative** to sections 5.1 to 5.8 and 7.2, not a replacem
 | Data folder | `/var/lib/food-orders/` (user `food-orders`) | `/var/lib/food-orders/data/` (uid 10001) |
 | Secrets | `/etc/food-orders/backend.env`, `/etc/caddy/food-orders-auth.env` | `/etc/food-orders/backend.env`, `/etc/food-orders/caddy.env` |
 
-Both paths want ports **80 and 443**, so run only one of them on a machine. If you switch, stop and disable the other first (`sudo systemctl disable --now caddy food-orders-backend` for the systemd path) and copy the database and pictures across by hand after a backup. Sections 1 to 4, 6 (DNS), 8 (checks), 10 and 11 apply to both.
+Both paths want ports **80 and 443**, so run only one of them on a machine. If you switch, stop and disable the other first (`sudo systemctl disable --now caddy food-orders-backend` for the systemd path) and copy the database and pictures across by hand after a backup. Sections 1 to 4, 6 (DNS), 8 (checks) and 11 apply to both; of section 10 only the lost-VM recipe carries over (the keep-alive paragraph is Oracle-only).
 
 The Docker files:
 
@@ -807,6 +813,184 @@ Other edits are the same: prefix the `sqlite3` command with `sudo -u '#10001'` a
 
 ---
 
+## 11b. DigitalOcean: step by step with Docker
+
+**Nothing in this section has been run.** No agent has a DigitalOcean account, ran Docker, `sudo` or any DNS command. Every step is "unverified until you do it" (section 12). It is the DigitalOcean walkthrough of the Docker path (11a); DOCKER1 stays "alternative to systemd". The owner chose DigitalOcean as the provider (HOST1, 2026-11-25). The domain (HOST2) is **still open**: part 3 offers a free DuckDNS name as the default and a bought domain as the alternative, and you pick one.
+
+**Prices, free credit and limits are not stated here.** DigitalOcean's plans, prices, trial credit, Reserved IP cost and bandwidth, and the limits of Let's Encrypt, DuckDNS and sslip.io change over time: **check them on the provider's own site before you rely on them.**
+
+Placeholders: `SERVER_IP`, `SSH_USER`, `customer.example.com`, `restaurant.example.com` as in the rest of this guide. Names such as `myshop-order.duckdns.org` below are **examples only**. Never paste a real password, hash, token or key into the repo.
+
+### 11b.1 Part 1: what runs where (Dockerisation of the three parts)
+
+```
+internet --443/80--> caddy container  (HTTPS, shared password, static files)
+                       |-- /var/www/food-orders/customer    (read-only mount; web build)
+                       |-- /var/www/food-orders/restaurant  (read-only mount; web build)
+                       '-- /api/*  -->  backend container, backend:3000 (private Compose network, no published port)
+database + pictures: /var/lib/food-orders/data     (host folder, mounted at /data in the backend container)
+backups:             /var/lib/food-orders/backups  (host folder, written by the one-shot `backup` service)
+secrets:             /etc/food-orders/backend.env, /etc/food-orders/caddy.env   (mode 600, root)
+source on the Droplet: /opt/food-orders-src       (sent from the laptop with rsync)
+```
+
+| Part | How it is packaged | Built where | Details |
+|---|---|---|---|
+| **Backend** (Dart server) | a container, from `backend/Dockerfile` (service `backend` in `deploy/docker/compose.yaml`) | **on the Droplet**: `sudo docker compose -f deploy/docker/compose.yaml build backend` | 11a.5 |
+| **Frontend** (customer and restaurant Flutter web apps) | **not containers.** Plain static files served by the stock `caddy:2.6.2` container through read-only mounts of `/var/www/food-orders/customer` and `/var/www/food-orders/restaurant` | **on your laptop** with `deploy/build.sh`, then `rsync` to the Droplet | 7.1, 11a.5, 11a.6 |
+| **Database** | **there is no database server and no database container.** The database is one SQLite file, `orders.db`, inside the backend's data folder, with the menu pictures (`images/`) next to it | nothing to build | below |
+
+Why the frontend is not in Docker: building Flutter inside Docker would need a Flutter image and a lot of RAM and time on a small Droplet, and the result is only static files. Caddy already serves static files, so no custom image is needed (DOCKER4).
+
+**The database, plainly.** `orders.db` is a file in `/var/lib/food-orders/data` on the Droplet's disk. The backend container opens it through a host-folder mount (the folder is `/data` inside the container; the image sets `ORDERS_DB` and `IMAGES_DIR`). Consequences:
+
+- **It survives** `docker compose down`, a container rebuild and a reboot, because the data is in a host folder, not in the container or a named volume. It is **not** lost when you rebuild the backend image.
+- **It is deleted** when you destroy the Droplet (or its disk). DigitalOcean's own backup or snapshot options are separate and **not** part of this guide: check on their site what they cost and cover. The reliable copy is the one you pull to your laptop (11a.8, 9.3).
+- **Backups** are made by the `backup` service (`sudo docker compose -f deploy/docker/compose.yaml run --rm backup`): a matching pair `orders-DATE.db` and `images-DATE.tar.gz` in `/var/lib/food-orders/backups`. Details: 11a.8.
+- **Sizing:** one small SQLite file plus pictures (each under 1 MiB) needs little disk. The Droplet size is decided by RAM (below) and by how many backups and logs you keep (`df -h`). There is no database process eating memory.
+- **No managed database** is used or needed at this size.
+
+**Choosing the Droplet** (check DigitalOcean's current plans and prices on their site):
+
+- **RAM: at least 1 GB.** The first image build downloads and compiles things; on 512 MB it may run out of memory. Fallback: add the swap file of 5.4 before building.
+- **Region** decides latency to your customers and which CPU type is offered; pick one near them (the CPU architecture only matters if you copy built programs between machines: here the image is built on the Droplet, so it always matches).
+- **Image:** Ubuntu LTS (the current one).
+- **Authentication:** choose **SSH key** when you create it (paste the **public** key from 4.1, never the private one). Do not choose a password login.
+- **Cloud Firewall (optional, recommended):** in the DigitalOcean control panel, a firewall that allows inbound only **22, 80 and 443** and attach it to the Droplet. If your own IP address or range is stable, allow port 22 **from that address only** (if your address changes you can still get in through the DigitalOcean console); keep 80 and 443 open to everyone (visitors and the certificate check need them). Until `ufw` is on (step 2) and this firewall is attached, the new Droplet is reachable from the whole internet on 22, 80 and 443, so do steps 1 and 2 promptly. It is a useful second layer **specifically for Docker**: ports a container publishes bypass `ufw` (11a.2), but a cloud firewall filters before the traffic reaches the machine. It does not replace the rule that the compose file never publishes 3000. Do not add a rule for 3000.
+- **IP address:** a Droplet keeps its public IP until it is destroyed. A Reserved IP exists if you want an address you can move to a new Droplet; check its price on their site.
+
+**First install, in order** (details in the linked section; do not skip the checklist in 11b.2):
+
+1. Create the Droplet as above. Note `SERVER_IP`. DigitalOcean's Ubuntu images normally let you log in as `root` with your key; create a normal sudo user and use it from then on. **It needs passwordless sudo:** 11a.5 and 11a.8 run `ssh ... 'sudo mkdir ...'`, `rsync --rsync-path="sudo rsync"` and the backup pull with no terminal, so a sudo password prompt would make them fail. That is why the user is created without a password. Unverified:
+
+   ```bash
+   # On your laptop, first login as root once:
+   ssh -i ~/.ssh/food_orders_vm root@SERVER_IP
+   # On the Droplet, as root (SSH_USER is a name you choose; no password is set, you log in with the key):
+   adduser --disabled-password --gecos "" SSH_USER
+   usermod -aG sudo SSH_USER
+   install -d -m 700 -o SSH_USER -g SSH_USER /home/SSH_USER/.ssh
+   install -m 600 -o SSH_USER -g SSH_USER /root/.ssh/authorized_keys /home/SSH_USER/.ssh/authorized_keys
+   echo 'SSH_USER ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-SSH_USER
+   chmod 440 /etc/sudoers.d/90-SSH_USER
+   visudo -c -f /etc/sudoers.d/90-SSH_USER     # must say "parsed OK"; if not, rm the file before closing this session
+   ```
+
+   Trade-off: anyone who holds that SSH key is root-equivalent on the Droplet (no password stands in the way), so protect the private key (a passphrase, a file only you can read) and never copy it to a shared machine.
+
+   From a **second** terminal, check `ssh -i ~/.ssh/food_orders_vm SSH_USER@SERVER_IP` and `sudo -n true` (no prompt, no error) work before you close the root session. Do not add `SSH_USER` to the `docker` group (11a.2).
+
+   **Then turn off root login over SSH.** Still in the root session:
+
+   ```bash
+   printf 'PermitRootLogin no\n' > /etc/ssh/sshd_config.d/10-no-root.conf
+   sshd -t && systemctl reload ssh      # the service is `ssh` on Ubuntu; `sshd -t` must print nothing
+   ```
+
+   Keep the root session open, and from a fresh terminal confirm `ssh -i ~/.ssh/food_orders_vm SSH_USER@SERVER_IP` still works and `root@SERVER_IP` is now refused. Check the effective setting with the `sshd -T` command of 4.2 (`permitrootlogin no`). A file in `sshd_config.d/` can be overridden by an earlier-sorted file that sets the same option, so trust the `sshd -T` output, not the file. Unverified.
+2. System update, `ufw` and SSH checks: section 4.2 (SSH rule before `ufw enable`; only 22, 80, 443).
+3. Install Docker Engine and the Compose plugin from Docker's official repository: 11a.2. Remember Docker bypasses `ufw`.
+4. Folders, ownership and the two env files: 11a.3.
+5. Domain and DNS (11b.3 below) **before** `up -d`.
+6. Checklist, part A "before sending" (11b.2): rows marked A.
+7. On your laptop, send the source and the web builds: the laptop part of 11a.5 (the `rsync` and `deploy/build.sh` lines; skip the build if you already did it in checklist row 9).
+8. Checklist, part B "after sending, before `up -d`" (11b.2): rows marked B. Then the Droplet part of 11a.5: `build`, `up -d`.
+9. Checks: 11b.2 "right after" (rows marked C), then 11a.7.
+10. Schedule the backup (cron) and rehearse a restore: 11a.8. Add photos: 11a.9.
+
+### 11b.2 Part 2: configuration before each deployment (checklist)
+
+Run through this before the **first install and every release**. Commands are from the Droplet unless "laptop" is written. All unverified until you do them. The **When** column says when a row can be run: **A** = before sending the source and builds (step 6 of 11b.1), **B** = after sending, before `up -d` (step 8), **C** = after `up -d`. (On a release, A and B are the same visit; the order only matters on a first install, where `/opt/food-orders-src` and the web folders are still empty at A.)
+
+Copy commands from the rendered page or from the code blocks, not from raw table text.
+
+| # | When | Check | How | Why it matters |
+|---|---|---|---|---|
+| 1 | A | The two env files exist, are mode 600 and owned by root | `sudo ls -l /etc/food-orders/` (expect `-rw-------` and `root root` for `backend.env` and `caddy.env`) | they hold the staff password and the gate hash; any other mode leaks them |
+| 2 | A | No placeholder is left in them | `sudo grep -n -e CHANGE-ME -e REPLACE_ME -e example.com /etc/food-orders/backend.env /etc/food-orders/caddy.env` must print **nothing** (it prints the matching lines, so read them in your terminal only; never paste the output anywhere) | `CHANGE-ME` keeps the staff routes off (403); `REPLACE_ME` as the hash means nobody can log in; `example.com` means no real certificate |
+| 3 | A | Staff ID and password follow the rules | ID 1 to 64 printable characters; password **at least 12**, no Vietnamese accents (`openssl rand -hex 12` is safe); no `$` and no ` #` in values (11a.3). The backend log says `staff routes: enabled` after start | too short or invalid: staff routes stay off (403) |
+| 4 | A | The staff password and the gate password are different, and the gate password is long and random | gate: 20 or more characters (`openssl rand -base64 18`); staff: a different value | the gate hash is costly to guess against; mixing them up locks the wrong people out |
+| 5 | A | `CUSTOMER_HOST` and `RESTAURANT_HOST` in `caddy.env` are the real names | `sudo grep -e '^CUSTOMER_HOST=' -e '^RESTAURANT_HOST=' /etc/food-orders/caddy.env` (host names are not secret) | an unset name falls back to `localhost` names (no certificate); a typo asks the certificate authority for the wrong name |
+| 6 | A | DNS already points both names at `SERVER_IP` **before** `up -d` | laptop: `dig +short customer.example.com`, `dig +short restaurant.example.com` (or `nslookup`) must print `SERVER_IP` | Caddy asks for certificates on first start; failed attempts count against rate limits (11b.3) |
+| 7 | A | The shop and bank settings are the real ones | `SHOP_*` (all five) for the summary report, `BANK_*` (all four) for bank transfer, in `backend.env` (11a.3, `CLAUDE.md` "Shop and bank settings"); the log shows `bank transfer: enabled` | unset: reports answer 503 and the cart offers cash only; fake values would put a wrong account on the QR |
+| 8 | B | The Compose file is valid | `cd /opt/food-orders-src && sudo docker compose -f deploy/docker/compose.yaml config --quiet` prints nothing | catches a missing env file or a typo before containers start |
+| 9 | A laptop, B Droplet | The web builds are there and from the intended revision | laptop: `deploy/build.sh` (if not built yet), then `test -f build/customer/index.html && test -f build/restaurant/index.html`; build web and backend from the **same** commit (`git status` clean, `git log -1`). Droplet: `ls /var/www/food-orders/customer/index.html /var/www/food-orders/restaurant/index.html` | an empty or missing folder with `rsync --delete` wipes the live site; mixed revisions can break the API contract |
+| 10 | A | **Backend update only:** a dated backup was made first | `sudo docker compose -f deploy/docker/compose.yaml run --rm backup`, then `sudo ls -l /var/lib/food-orders/backups` shows a new pair | a schema step (step 8) cannot be undone |
+| 11 | A | At least one backup copy is **off** the Droplet (not on a first install, when no backup exists yet) | laptop: the `rsync` pull of 11a.8, then check `~/food-orders-backups/` | a destroyed Droplet takes its disk and the on-disk backups with it |
+| 12 | A | The data and backups folders exist and belong to uid 10001 | `sudo ls -ldn /var/lib/food-orders/data /var/lib/food-orders/backups` shows `10001 10001` and mode `drwx------` | a missing folder stops the container (on purpose); the wrong owner makes the database read-only or fail |
+| 13 | C | Only 80 and 443 are published; 3000 is not | `sudo docker ps --format '{{.Names}}  {{.Ports}}'`: `backend` shows `3000/tcp` with **no** `->`; `sudo ss -ltn 'sport = :3000'` prints only its header line; from another machine `curl -m 5 http://SERVER_IP:3000/menu` fails or times out (11a.7 item 3) | a published 3000 skips the password, the 64 KB limit and the cross-site guard; `ufw status` is no proof because Docker bypasses it |
+| 14 | A | Disk space and memory | `df -h /`, `free -m` (and `sudo du -sh /var/lib/food-orders/*`) | a full disk breaks SQLite writes and backups; low memory kills the image build (add swap, 5.4) |
+| 15 | A | The clock is right | `timedatectl` shows `System clock synchronized: yes` | the server clock decides the 5-minute payment expiry and the certificate validity |
+| 16 | A | Known risks are accepted | `caddy:2.6.2` is a **November 2022** release (accepted risk, revisit by 2027-03-01, DOCKER5); `dart:3.14.0`, `debian:bookworm-slim` and the Caddy image are **not pinned by digest** (DOCKER2); the hardening options are unverified (11a.5, 11a.10) | so you know what to look at if a build or start fails |
+| 17 | A | Nobody has typed `down -v` | never run `docker compose down -v`; plain `down` or `stop` is fine | `-v` deletes `caddy_data` (certificates, ACME account) and a re-request can hit the certificate rate limit |
+
+**Right after the deployment** (`up -d`, then the checks of 11a.7):
+
+1. `sudo docker compose -f deploy/docker/compose.yaml ps`: `backend` is `healthy`, `caddy` is running.
+2. `curl -sI https://customer.example.com/` is **401** without the gate password and **200** with it (`curl -sI -u demo https://customer.example.com/` asks for the password at a prompt). The same for the restaurant host; `http://` redirects to `https://`.
+3. A staff-only route answers **401** without the staff headers and works with the staff ID and password (for example the staff login in the restaurant app, or the export dialog).
+4. Place a test order on the customer site (phone on mobile data); it appears **live** on the restaurant site (this is the stream).
+5. `sudo docker compose -f deploy/docker/compose.yaml logs --tail 50 backend` shows `staff routes: enabled` and no errors; `logs --tail 50 caddy` shows no certificate errors.
+6. The port check of row 13 again.
+
+### 11b.3 Part 3: domain setup
+
+**Why a name is needed.** The app is served over HTTPS and this setup is built on host names: Caddy asks a public certificate authority (Let's Encrypt by default) for a certificate **per name**, and the config here has no IP-address option. Check Let's Encrypt's current rules on their site rather than relying on this sentence. The app needs **two** names, one for the customer site and one for the restaurant site (`CUSTOMER_HOST` and `RESTAURANT_HOST`), both pointing at the same Droplet IP. Which option you pick is the owner's decision (HOST2).
+
+**Option A, free, the default: DuckDNS** (https://www.duckdns.org). Its terms, limits and availability: **check on their site.**
+
+1. Sign in on the DuckDNS site and create **two** subdomains, for example (examples only) `myshop-order` and `myshop-kitchen`, giving `myshop-order.duckdns.org` and `myshop-kitchen.duckdns.org`.
+2. For **each** subdomain, set the current IP to `SERVER_IP` (the DuckDNS page has a field for it). The DuckDNS **token** on that page is a secret: keep it in your password manager, never in the repo, and you do not need it on the Droplet as long as the IP does not change.
+3. Check from your laptop (both must print `SERVER_IP`; a change can take a few minutes):
+
+   ```bash
+   dig +short myshop-order.duckdns.org
+   dig +short myshop-kitchen.duckdns.org
+   # or: nslookup myshop-order.duckdns.org
+   ```
+
+4. Put the two names in `/etc/food-orders/caddy.env` (edit with `sudoedit`, not `install`, if the file exists, see 11a.3):
+
+   ```
+   CUSTOMER_HOST=myshop-order.duckdns.org
+   RESTAURANT_HOST=myshop-kitchen.duckdns.org
+   ```
+
+   (examples: use your own names). Then `up -d` (11a.5) or, if Caddy already runs, `sudo docker compose -f deploy/docker/compose.yaml up -d --force-recreate caddy`.
+5. Caddy requests the certificates **by itself** on first start, once DNS points at the Droplet and ports 80 and 443 reach the container. You do nothing else.
+6. **If the IP changes:** a Droplet keeps its IP until destroyed, so normally nothing. After a rebuild on a new Droplet, set the new `SERVER_IP` on the DuckDNS page for both names. A Reserved IP avoids that (check its price on DigitalOcean's site). A free DNS name is as reliable as the service behind it: for a real shop prefer option C.
+
+**Option B, quick test only: sslip.io / nip.io style names.** These services answer DNS queries with the IP written inside the name, so no account or DNS edit is needed. Example (documentation address, not yours): `customer.203-0-113-10.sslip.io` and `restaurant.203-0-113-10.sslip.io` for the IP `203.0.113.10`. Check the exact spelling rules on sslip.io's site, and verify with `dig +short` as above. Warning: such names are shared by many users, so **certificate rate limits that count per registered domain are shared with everyone else using it**, and a certificate request may already be refused. Check their pages and Let's Encrypt's rate-limit page **before relying on it**. Use it for a first trial, not for the shop.
+
+**Option C, paid: your own domain** (the owner's decision, HOST2). Buy a domain at any registrar (cost and rules are the registrar's). Add **two A records**, `customer` and `restaurant`, both with value `SERVER_IP` (the table in section 6), at the registrar's DNS or at DigitalOcean DNS if you move the name servers there. Use a **low TTL** (for example 300 seconds) while you set up and test, and raise it later. Add AAAA records only if the Droplet has working IPv6 and the firewall allows it. Names then look like `customer.yourshop.example` (example only).
+
+**Not recommended:** free top-level-domain services of the `.tk` / `.ml` kind. They have been unreliable and can be withdrawn without notice.
+
+**Confirm HTTPS works:**
+
+```bash
+curl -sI https://CUSTOMER_HOST/        # expect HTTP/2 401 (no password); with -u demo: 200
+curl -sI http://CUSTOMER_HOST/         # expect a redirect to https://
+```
+
+(replace `CUSTOMER_HOST` with your real name), then open it in a browser: a lock icon and no certificate warning.
+
+**If the certificate fails**, first read what Caddy says: `cd /opt/food-orders-src && sudo docker compose -f deploy/docker/compose.yaml logs --tail 100 caddy`. Typical causes:
+
+- **DNS does not point at the Droplet yet** (or points at an old IP): `dig +short` must print `SERVER_IP` for both names. Wait for it, then recreate Caddy as above. Do not keep restarting while DNS is wrong: failed attempts count against the authority's limits.
+- **Port 80 or 443 is blocked:** by `ufw` (`sudo ufw status` must allow 80 and 443), by the DigitalOcean Cloud Firewall, or because another program holds the port (for example the systemd Caddy of the other path: `sudo systemctl disable --now caddy`). Port 80 matters even if you only use HTTPS, because the authority checks through it.
+- **Wrong name in `caddy.env`:** a typo, a leftover `example.com`, or an unset name (then Caddy uses the local-only `localhost` names and asks for nothing).
+- **Rate limit:** the authority refuses for a while after repeated failures or too many requests for the same names. The log says so. **Wait; do not repeat `docker compose down -v`** (it deletes the saved certificates and ACME account, which makes this worse). Limits and wait times: check the Let's Encrypt site. Meanwhile you can test with option A or C names you have not used yet.
+- After fixing the cause, `up -d --force-recreate caddy` makes Caddy retry.
+
+**Two different passwords.** The **shared gate password** (Caddy basic auth, `FOOD_ORDERS_AUTH_USER` and the hash in `caddy.env`) is what visitors type to open either site. The **staff ID and password** (`STAFF_ID` and `STAFF_PASSWORD` in `backend.env`) are what the restaurant app sends for staff-only actions (confirm payment, menu edits, export). They are separate values in separate files; do not reuse one for the other.
+
+### 11b.4 What this section does not verify
+
+Everything: creating the Droplet, the sudo user steps, the cloud firewall, Docker on a DigitalOcean Ubuntu image, the image build on the chosen size, DuckDNS and sslip.io behaviour, certificate issuance, and all items in 11a.10. The acceptance rows are in section 12.
+
+---
+
 ## 12. Acceptance status
 
 | Item | Status |
@@ -823,3 +1007,6 @@ Other edits are the same: prefix the `sqlite3` command with `sudo -u '#10001'` a
 | Docker path: hardening options (`read_only`, `cap_drop`, `tmpfs`, `mem_limit`) work with the Dart bundle, SQLite and Caddy 2.6.2 | **unverified** |
 | Docker path: `docker compose run --rm backup` makes a pair, cron runs it, restore rehearsed and a real restore tried | **unverified** |
 | Docker path: orders survive a container restart and a reboot | **unverified** |
+| DigitalOcean (11b): the Droplet, sudo user, optional cloud firewall and Docker install steps work as written, and the Droplet can build the image | **unverified** |
+| DigitalOcean (11b): both names resolve to the Droplet (DuckDNS or a bought domain) and Caddy gets certificates on first start | **unverified** |
+| DigitalOcean (11b): the pre-deployment checklist (11b.2) is complete and its checks pass on a real Droplet, including port 3000 closed from another network | **unverified** |
