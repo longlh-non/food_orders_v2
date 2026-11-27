@@ -6,29 +6,31 @@ blockedBy: [qr-static-api-contract]
 securityReview: required
 ---
 
-# Customer: save the QR as a PNG file (web only, no new dependency)
+# Customer: download the QR image file (web only, no new dependency)
 
-Planned 2026-11-26. Decision QS4 in `qr-static-api-contract`. Security review is required (it builds a Blob and a download link in the browser). Independent of the backend, so it can run early.
+Planned 2026-11-26, rewritten the same day after the owner's design change: the QR is a third-party **image** in the server's images folder, so the download saves **that image file itself**, not a re-rendered QR. The slug is historical (it was "save the QR as a PNG"); the file may be a jpg, png or webp. Decision QS4 in `qr-static-api-contract`. Security review is required (it fetches a file and builds a Blob and a download link in the browser). Independent of the backend, so it can run early.
 
 ## Sources
 
-`lib/shared/chime.dart`, `chime_stub.dart`, `chime_web.dart` and `lib/shared/locale_storage*.dart` (the conditional-export pattern), `pubspec.yaml` (`qr_flutter ^4.1.0` and `web ^1.1.0` are already there), how `payment_qr_page.dart` draws the QR (`QrImageView`).
+`lib/shared/chime.dart`, `chime_stub.dart`, `chime_web.dart` and `lib/shared/locale_storage*.dart` (the conditional-export pattern), `lib/shared/api/order_api_client.dart` (`imageUrlFor`), `pubspec.yaml` (`web ^1.1.0` is already there; `qr_flutter` is **not** used by this option).
 
 ## Goal
 
-- `lib/customer/download/` (customer-only, so not in `shared/`, invariant 2): `png_download.dart` exports `png_download_stub.dart` `if (dart.library.js_interop)` `png_download_web.dart`. One function, `Future<bool> savePng(Uint8List bytes, String fileName)`; plus `bool get canSavePng` (false in the stub).
-- Web: Blob with MIME `image/png`, an `<a download>` element clicked once and removed, the object URL revoked afterwards. The file name is a **fixed** string such as `qr-chuyen-khoan.png` (no order data, no customer text).
-- A small helper turns a payload string into PNG bytes: `QrPainter(data: payload, version: QrVersions.auto, ...)` and `toImageData(size)` with a **white background and a quiet-zone margin** so banking apps can scan the saved file. 1024 px square. Returns null on failure.
-- Non-web (VM, tests): the stub does nothing and returns false; the button that will use it is hidden when `canSavePng` is false.
+- `lib/customer/download/` (customer-only, so not in `shared/`, invariant 2): `image_download.dart` exports `image_download_stub.dart` `if (dart.library.js_interop)` `image_download_web.dart`. One function, `Future<bool> saveImageFile(String imageUrl, String fileName)`; plus `bool get canSaveImage` (false in the stub). A test seam: the page takes the function by constructor (default = this one), and the web file splits "fetch the bytes" from "hand them to the browser" so each can be faked.
+- Web: fetch `imageUrl` (the value of `OrderApiClient.imageUrlFor(name)`, which is a **same-origin** `/api/images/<file>` path; refuse any URL that is not same-origin, so the function can never fetch another site), read the body as bytes, make a `Blob` with the response's image MIME type (fall back to the type from the file extension; refuse a non-`image/*` type), then an `<a download>` element clicked once and removed, the object URL revoked afterwards. Returns false on any failure (network, non-200, wrong type, empty body); never throws.
+- The saved **file name is the picture name itself** (`fileName`, taken from the server's `staticQrImage`, already limited by the picture-name rule). No order data, no customer text.
+- The bytes are saved as served: no decoding, no re-drawing, no resizing. `QrPainter` and `qr_flutter` are not used.
+- Non-web (VM, tests): the stub does nothing and returns false; the button that will use it is hidden when `canSaveImage` is false.
 
 ## Non-goals
 
-The button and page (next card). Sharing sheets, printing, any package.
+The button and page (the payment-page card). Sharing sheets, printing, any package, drawing a QR.
 
 ## Tests written with the change
 
-- helper: PNG bytes start with the PNG signature `89 50 4E 47`, size 1024 square, corners are white; decodes to non-empty for a real static payload string. An empty payload returns null rather than throwing.
-- stub: `canSavePng` false, `savePng` returns false.
+- stub: `canSaveImage` false, `saveImageFile` returns false.
+- the pure parts of the web logic (kept in a file the VM can run, e.g. a helper `isSameOriginImagePath(url)` and `mimeForFileName(name)`): same-origin `/api/images/xoi.png` accepted; `https://other.example/x.png`, `//other.example/x.png`, `javascript:` and `data:` URLs refused; `.png`, `.jpg`, `.jpeg`, `.webp` map to the right MIME and anything else is refused.
+- with a fake fetch and a fake save: success returns true and hands the exact bytes and the picture name to the save; non-200, empty body, non-image type and a thrown error all return false without throwing.
 - `make boundaries`: nothing in `shared/` imports it.
 - The web implementation is not run by `flutter test` (VM). Compile check: `flutter build web -t lib/customer/main.dart` (gate-like, exit code recorded in the review).
 
@@ -36,8 +38,8 @@ The button and page (next card). Sharing sheets, printing, any package.
 
 | Criterion | Verified by |
 |---|---|
-| Helper and stub behaviour | `make test` (gate) |
+| Stub and pure-helper behaviour | `make test` (gate) |
 | Gates, boundaries | `make analyze`, `make format-check`, `make boundaries` (gates) |
 | Web build compiles | `flutter build web` exit 0 (recorded) |
-| No new dependency; fixed file name; URL revoked | `security-reviewer`, `code-reviewer` (reviews) |
-| The file really downloads in Chrome and a banking app scans the saved PNG; iOS Safari behaviour | owner acceptance, "unverified" until done |
+| No new dependency; same-origin only; file name is the picture name; URL revoked | `security-reviewer`, `code-reviewer` (reviews) |
+| The file really downloads in Chrome and the saved image scans in the owner's payment app; iOS Safari behaviour | owner acceptance, "unverified" until done |
