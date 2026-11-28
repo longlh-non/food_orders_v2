@@ -151,6 +151,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get orderMarkDelivered => 'Mark delivered';
 
   @override
+  String get statusFinished => 'Served';
+
+  @override
+  String get orderMarkFinished => 'Mark served';
+
+  @override
+  String get orderCheckPaidNote =>
+      'Please check whether the order has been paid';
+
+  @override
+  String get orderCancel => 'Cancel order';
+
+  @override
+  String get orderCancelConfirm => 'Cancel this order?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'The customer may have already paid. Handle any refund by hand, outside the app.';
+
+  @override
+  String get orderCancelFinalNote =>
+      'A cancelled order cannot be changed back.';
+
+  @override
+  String get orderChangeStatus => 'Change status';
+
+  @override
+  String get orderChangeStatusFinishedNote =>
+      'This changes the monthly report.';
+
+  @override
+  String get orderChangeStatusNotAllowed =>
+      'This order\'s status cannot be changed.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'The order is cancelled and cannot be changed.';
+
+  @override
   String get orderUnpaid => 'Not paid yet';
 
   @override

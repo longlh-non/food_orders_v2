@@ -48,3 +48,19 @@ confirm button) were added to all 10 files. The category names reuse the
 - `zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`: machine-quality drafts,
   **unverified** (no fluent reader has checked them). No plural messages were
   added, so Russian needed no `few`/`many` forms.
+
+## Status "served" and staff status keys (status-finished-shared)
+
+11 keys were added to all 10 files: `statusFinished`, `orderMarkFinished`,
+`orderCheckPaidNote`, `orderCancel`, `orderCancelConfirm`,
+`orderCancelPaidNote`, `orderCancelFinalNote`, `orderChangeStatus`,
+`orderChangeStatusFinishedNote`, `orderChangeStatusNotAllowed`,
+`orderChangeStatusCancelled`. No screen uses them yet.
+
+- `vi`: `statusFinished` ("Đã phục vụ"), `orderMarkFinished` ("Đánh dấu đã phục vụ")
+  and `orderCheckPaidNote` ("Vui lòng kiểm tra nếu đơn hàng đã được thanh toán")
+  are the owner's exact words; the other 8 `vi` keys are agent drafts,
+  **pending owner acceptance**.
+- `en`: drafted.
+- `zh`, `lo`, `es`, `fr`, `ru`, `de`, `ko`, `ja`: machine-quality drafts,
+  **unverified** (no fluent reader has checked them). No plural messages.

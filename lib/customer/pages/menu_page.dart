@@ -149,6 +149,7 @@ class _MenuPageState extends State<MenuPage> {
         return until != null && !now.isAfter(until);
       }
       return o.status != OrderStatus.delivered &&
+          o.status != OrderStatus.finished &&
           o.status != OrderStatus.cancelled;
     }).toList();
   }

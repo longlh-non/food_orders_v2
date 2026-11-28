@@ -360,6 +360,7 @@ class _PaymentQrPageState extends State<PaymentQrPage> {
       case OrderStatus.preparing:
       case OrderStatus.ready:
       case OrderStatus.delivered:
+      case OrderStatus.finished:
         return _message(
           context,
           order.paymentMethod == PaymentMethod.bank_transfer

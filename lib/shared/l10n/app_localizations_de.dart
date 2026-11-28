@@ -154,6 +154,44 @@ class AppLocalizationsDe extends AppLocalizations {
   String get orderMarkDelivered => 'Als ausgeliefert markieren';
 
   @override
+  String get statusFinished => 'Serviert';
+
+  @override
+  String get orderMarkFinished => 'Als serviert markieren';
+
+  @override
+  String get orderCheckPaidNote =>
+      'Bitte prüfen, ob die Bestellung bezahlt wurde';
+
+  @override
+  String get orderCancel => 'Bestellung stornieren';
+
+  @override
+  String get orderCancelConfirm => 'Diese Bestellung stornieren?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'Der Kunde hat möglicherweise schon bezahlt. Eine Rückerstattung bitte manuell außerhalb der App abwickeln.';
+
+  @override
+  String get orderCancelFinalNote =>
+      'Eine stornierte Bestellung kann nicht zurückgesetzt werden.';
+
+  @override
+  String get orderChangeStatus => 'Status ändern';
+
+  @override
+  String get orderChangeStatusFinishedNote => 'Dies ändert den Monatsbericht.';
+
+  @override
+  String get orderChangeStatusNotAllowed =>
+      'Der Status dieser Bestellung kann nicht geändert werden.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'Die Bestellung ist storniert und kann nicht geändert werden.';
+
+  @override
   String get orderUnpaid => 'Noch nicht bezahlt';
 
   @override

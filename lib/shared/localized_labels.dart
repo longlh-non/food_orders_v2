@@ -11,6 +11,7 @@ extension OrderStatusText on OrderStatus {
     OrderStatus.preparing => l10n.statusPreparing,
     OrderStatus.ready => l10n.statusReady,
     OrderStatus.delivered => l10n.statusDelivered,
+    OrderStatus.finished => l10n.statusFinished,
     OrderStatus.cancelled => l10n.statusCancelled,
   };
 }

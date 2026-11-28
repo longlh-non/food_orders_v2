@@ -7,9 +7,20 @@ import 'display_text.dart';
 /// (except that an order cancelled by the payment expiry can be renewed or
 /// switched to cash within a window the server decides).
 ///
+/// `finished` ("Đã phục vụ") is being added to replace `ready` and
+/// `delivered`; those two stay in this enum until the cleanup task removes
+/// them, and screens treat `finished` like `delivered` until then.
+///
 /// Keep in sync by hand with the backend's status list (see CLAUDE.md).
-// ignore: constant_identifier_names
-enum OrderStatus { awaiting_payment, preparing, ready, delivered, cancelled }
+enum OrderStatus {
+  // ignore: constant_identifier_names
+  awaiting_payment,
+  preparing,
+  ready,
+  delivered,
+  finished,
+  cancelled,
+}
 
 /// How an order is paid. Keep in sync with the backend (`cash`,
 /// `bank_transfer`).
@@ -254,6 +265,7 @@ extension OrderStatusLabel on OrderStatus {
     OrderStatus.preparing => 'Đang chuẩn bị',
     OrderStatus.ready => 'Sẵn sàng lấy hàng',
     OrderStatus.delivered => 'Đã giao',
+    OrderStatus.finished => 'Đã phục vụ',
     OrderStatus.cancelled => 'Đã hủy',
   };
 }

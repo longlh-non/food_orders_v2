@@ -155,6 +155,45 @@ class AppLocalizationsFr extends AppLocalizations {
   String get orderMarkDelivered => 'Marquer comme livré';
 
   @override
+  String get statusFinished => 'Servi';
+
+  @override
+  String get orderMarkFinished => 'Marquer comme servi';
+
+  @override
+  String get orderCheckPaidNote =>
+      'Veuillez vérifier si la commande a été payée';
+
+  @override
+  String get orderCancel => 'Annuler la commande';
+
+  @override
+  String get orderCancelConfirm => 'Annuler cette commande ?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'Le client a peut-être déjà payé. Gérez tout remboursement à la main, en dehors de l\'application.';
+
+  @override
+  String get orderCancelFinalNote =>
+      'Une commande annulée ne peut pas être rétablie.';
+
+  @override
+  String get orderChangeStatus => 'Changer le statut';
+
+  @override
+  String get orderChangeStatusFinishedNote =>
+      'Cela modifie le rapport mensuel.';
+
+  @override
+  String get orderChangeStatusNotAllowed =>
+      'Le statut de cette commande ne peut pas être modifié.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'La commande est annulée et ne peut pas être modifiée.';
+
+  @override
   String get orderUnpaid => 'Non payé';
 
   @override

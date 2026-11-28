@@ -61,15 +61,22 @@ class OrderApiClient {
   );
 
   /// Changes an order's status (`PATCH /orders/{id}`) and returns the
-  /// updated order. Throws [OrderRequestException] like [placeOrder]
-  /// (404 for an unknown id).
-  Future<Order> updateStatus(String id, OrderStatus status) => _orderCall(
+  /// updated order. Staff only: [staffHeaders] are sent as request headers
+  /// and never stored, logged or put in an error. Throws
+  /// [OrderRequestException] like [placeOrder]: 401, 403 and 429 are the staff
+  /// gate, 404 an unknown id, 409 a status change the server refuses, 400 an
+  /// invalid request; tell them apart by `statusCode`.
+  Future<Order> updateStatus(
+    String id,
+    OrderStatus status, {
+    required Map<String, String> staffHeaders,
+  }) => _orderCall(
     'PATCH /orders/{id}',
     () => _client.patch(
       // Ids come from whoever placed the order, so encode it: a `/`, `?` or
       // `%` in an id must not change the path or query.
       Uri(path: '$_baseUrl/orders/${Uri.encodeComponent(id)}'),
-      headers: {'Content-Type': 'application/json'},
+      headers: {...staffHeaders, 'Content-Type': 'application/json'},
       body: jsonEncode({'status': status.name}),
     ),
   );

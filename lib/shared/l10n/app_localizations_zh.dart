@@ -143,6 +143,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get orderMarkDelivered => '标记为已送达';
 
   @override
+  String get statusFinished => '已上菜';
+
+  @override
+  String get orderMarkFinished => '标记为已上菜';
+
+  @override
+  String get orderCheckPaidNote => '请检查订单是否已付款';
+
+  @override
+  String get orderCancel => '取消订单';
+
+  @override
+  String get orderCancelConfirm => '取消此订单？';
+
+  @override
+  String get orderCancelPaidNote => '顾客可能已经付款。如需退款，请在应用之外手动处理。';
+
+  @override
+  String get orderCancelFinalNote => '已取消的订单无法恢复。';
+
+  @override
+  String get orderChangeStatus => '更改状态';
+
+  @override
+  String get orderChangeStatusFinishedNote => '这会改变月度报表。';
+
+  @override
+  String get orderChangeStatusNotAllowed => '无法更改此订单的状态。';
+
+  @override
+  String get orderChangeStatusCancelled => '订单已取消，无法更改。';
+
+  @override
   String get orderUnpaid => '未付款';
 
   @override

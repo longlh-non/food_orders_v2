@@ -157,6 +157,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get orderMarkDelivered => 'Отметить выданным';
 
   @override
+  String get statusFinished => 'Подан';
+
+  @override
+  String get orderMarkFinished => 'Отметить поданным';
+
+  @override
+  String get orderCheckPaidNote => 'Пожалуйста, проверьте, оплачен ли заказ';
+
+  @override
+  String get orderCancel => 'Отменить заказ';
+
+  @override
+  String get orderCancelConfirm => 'Отменить этот заказ?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'Клиент мог уже оплатить. Возврат средств оформляйте вручную, вне приложения.';
+
+  @override
+  String get orderCancelFinalNote => 'Отменённый заказ нельзя вернуть.';
+
+  @override
+  String get orderChangeStatus => 'Изменить статус';
+
+  @override
+  String get orderChangeStatusFinishedNote => 'Это изменит месячный отчёт.';
+
+  @override
+  String get orderChangeStatusNotAllowed =>
+      'Статус этого заказа нельзя изменить.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'Заказ отменён и не может быть изменён.';
+
+  @override
   String get orderUnpaid => 'Не оплачен';
 
   @override

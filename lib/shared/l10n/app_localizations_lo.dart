@@ -144,6 +144,42 @@ class AppLocalizationsLo extends AppLocalizations {
   String get orderMarkDelivered => 'ໝາຍວ່າສົ່ງແລ້ວ';
 
   @override
+  String get statusFinished => 'ເສີບແລ້ວ';
+
+  @override
+  String get orderMarkFinished => 'ໝາຍວ່າເສີບແລ້ວ';
+
+  @override
+  String get orderCheckPaidNote => 'ກະລຸນາກວດເບິ່ງວ່າອໍເດີໄດ້ຊຳລະແລ້ວຫຼືບໍ່';
+
+  @override
+  String get orderCancel => 'ຍົກເລີກອໍເດີ';
+
+  @override
+  String get orderCancelConfirm => 'ຍົກເລີກອໍເດີນີ້ບໍ?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'ລູກຄ້າອາດຈະຊຳລະແລ້ວ. ການຄືນເງິນໃຫ້ເຮັດດ້ວຍມື ນອກແອັບ.';
+
+  @override
+  String get orderCancelFinalNote => 'ອໍເດີທີ່ຍົກເລີກແລ້ວປ່ຽນກັບຄືນບໍ່ໄດ້.';
+
+  @override
+  String get orderChangeStatus => 'ປ່ຽນສະຖານະ';
+
+  @override
+  String get orderChangeStatusFinishedNote =>
+      'ການດຳເນີນການນີ້ຈະປ່ຽນລາຍງານປະຈຳເດືອນ.';
+
+  @override
+  String get orderChangeStatusNotAllowed => 'ບໍ່ສາມາດປ່ຽນສະຖານະຂອງອໍເດີນີ້ໄດ້.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'ອໍເດີຖືກຍົກເລີກແລ້ວ ແລະ ປ່ຽນບໍ່ໄດ້.';
+
+  @override
   String get orderUnpaid => 'ຍັງບໍ່ໄດ້ຊຳລະ';
 
   @override

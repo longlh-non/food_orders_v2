@@ -35,6 +35,7 @@ class OrderRepository extends ChangeNotifier {
       .where(
         (o) =>
             o.status != OrderStatus.delivered &&
+            o.status != OrderStatus.finished &&
             o.status != OrderStatus.cancelled,
       )
       .toList();
@@ -94,9 +95,19 @@ class OrderRepository extends ChangeNotifier {
   }
 
   /// Changes an order's status on the backend, then merges the result.
-  /// Throws [OrderRequestException] on failure, leaving the cache unchanged.
-  Future<void> updateStatus(String id, OrderStatus status) async {
-    final result = await _api.updateStatus(id, status);
+  /// Staff only: [staffHeaders] are passed straight to the client and not
+  /// kept. Throws [OrderRequestException] on failure, leaving the cache
+  /// unchanged.
+  Future<void> updateStatus(
+    String id,
+    OrderStatus status, {
+    required Map<String, String> staffHeaders,
+  }) async {
+    final result = await _api.updateStatus(
+      id,
+      status,
+      staffHeaders: staffHeaders,
+    );
     _merge(result);
   }
 

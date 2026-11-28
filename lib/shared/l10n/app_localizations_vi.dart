@@ -145,6 +145,43 @@ class AppLocalizationsVi extends AppLocalizations {
   String get orderMarkDelivered => 'Đánh dấu đã giao';
 
   @override
+  String get statusFinished => 'Đã phục vụ';
+
+  @override
+  String get orderMarkFinished => 'Đánh dấu đã phục vụ';
+
+  @override
+  String get orderCheckPaidNote =>
+      'Vui lòng kiểm tra nếu đơn hàng đã được thanh toán';
+
+  @override
+  String get orderCancel => 'Hủy đơn';
+
+  @override
+  String get orderCancelConfirm => 'Hủy đơn này?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'Khách có thể đã thanh toán. Nếu có hoàn tiền, hãy xử lý thủ công ngoài ứng dụng.';
+
+  @override
+  String get orderCancelFinalNote => 'Đơn đã hủy không thể đổi lại.';
+
+  @override
+  String get orderChangeStatus => 'Đổi trạng thái';
+
+  @override
+  String get orderChangeStatusFinishedNote =>
+      'Thao tác này sẽ thay đổi báo cáo tháng.';
+
+  @override
+  String get orderChangeStatusNotAllowed => 'Không thể đổi trạng thái đơn này.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'Đơn đã bị hủy nên không thể thay đổi.';
+
+  @override
   String get orderUnpaid => 'Chưa thanh toán';
 
   @override

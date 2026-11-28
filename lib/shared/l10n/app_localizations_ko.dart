@@ -143,6 +143,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get orderMarkDelivered => '전달 완료로 표시';
 
   @override
+  String get statusFinished => '서빙 완료';
+
+  @override
+  String get orderMarkFinished => '서빙 완료로 표시';
+
+  @override
+  String get orderCheckPaidNote => '주문이 결제되었는지 확인해 주세요';
+
+  @override
+  String get orderCancel => '주문 취소';
+
+  @override
+  String get orderCancelConfirm => '이 주문을 취소할까요?';
+
+  @override
+  String get orderCancelPaidNote => '고객이 이미 결제했을 수 있습니다. 환불은 앱 밖에서 직접 처리하세요.';
+
+  @override
+  String get orderCancelFinalNote => '취소된 주문은 되돌릴 수 없습니다.';
+
+  @override
+  String get orderChangeStatus => '상태 변경';
+
+  @override
+  String get orderChangeStatusFinishedNote => '월간 보고서가 변경됩니다.';
+
+  @override
+  String get orderChangeStatusNotAllowed => '이 주문의 상태는 변경할 수 없습니다.';
+
+  @override
+  String get orderChangeStatusCancelled => '주문이 취소되어 변경할 수 없습니다.';
+
+  @override
   String get orderUnpaid => '미결제';
 
   @override

@@ -62,3 +62,7 @@ Any Flutter code. The `paid` status and the `bank_transfer_static` method and th
 ## Environment limits
 
 The migration can't be undone: dated backup first (CLAUDE.md "Storage"). The apps still send `ready` / `delivered` and an unproven PATCH until the restaurant and customer cards ship, so do not deploy this card alone (SF9).
+
+## Note from `status-finished-shared` (2026-11-28)
+
+`OrdersPage._changeStatus` sends the remembered staff credentials, or an EMPTY header map when staff haven't typed any, because the backend does not check headers on `PATCH /orders/{id}` yet. When the staff check is enforced this call gets 401/403/429 and today the page shows one generic "update failed" snackbar and never prompts. Handling 401 (re-prompt or back to the login screen, and clear the stored credentials), 403 and 429 on the status-change path belongs to the restaurant card; do not deploy the backend check before it ships. A repeated tap after a 401 counts toward the 5-in-60-seconds lock, so the restaurant card must not let status buttons loop on a 401.

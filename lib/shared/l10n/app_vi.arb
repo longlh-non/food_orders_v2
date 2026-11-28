@@ -192,6 +192,50 @@
   "@orderMarkDelivered": {
     "description": "Button: mark a ready order as delivered."
   },
+  "statusFinished": "Đã phục vụ",
+  "@statusFinished": {
+    "description": "Order status: the order has been served to the customer (the end of a normal order)."
+  },
+  "orderMarkFinished": "Đánh dấu đã phục vụ",
+  "@orderMarkFinished": {
+    "description": "Button: staff mark an order as served."
+  },
+  "orderCheckPaidNote": "Vui lòng kiểm tra nếu đơn hàng đã được thanh toán",
+  "@orderCheckPaidNote": {
+    "description": "Note on a card staff must check: please check whether the order has been paid."
+  },
+  "orderCancel": "Hủy đơn",
+  "@orderCancel": {
+    "description": "Button: staff cancel an order."
+  },
+  "orderCancelConfirm": "Hủy đơn này?",
+  "@orderCancelConfirm": {
+    "description": "Dialog title: confirm cancelling this order."
+  },
+  "orderCancelPaidNote": "Khách có thể đã thanh toán. Nếu có hoàn tiền, hãy xử lý thủ công ngoài ứng dụng.",
+  "@orderCancelPaidNote": {
+    "description": "Dialog line: the customer may already have paid; any refund is handled by hand outside the app."
+  },
+  "orderCancelFinalNote": "Đơn đã hủy không thể đổi lại.",
+  "@orderCancelFinalNote": {
+    "description": "Dialog line: a cancelled order cannot be changed back."
+  },
+  "orderChangeStatus": "Đổi trạng thái",
+  "@orderChangeStatus": {
+    "description": "Button and dialog title: staff change an order status."
+  },
+  "orderChangeStatusFinishedNote": "Thao tác này sẽ thay đổi báo cáo tháng.",
+  "@orderChangeStatusFinishedNote": {
+    "description": "Second line in the served confirmation dialog: this changes the monthly report."
+  },
+  "orderChangeStatusNotAllowed": "Không thể đổi trạng thái đơn này.",
+  "@orderChangeStatusNotAllowed": {
+    "description": "Snackbar: the server refused this status change for this order."
+  },
+  "orderChangeStatusCancelled": "Đơn đã bị hủy nên không thể thay đổi.",
+  "@orderChangeStatusCancelled": {
+    "description": "Snackbar: the order is cancelled and cannot be changed."
+  },
   "orderUnpaid": "Chưa thanh toán",
   "@orderUnpaid": {
     "description": "Text on an order card that has not been paid yet."

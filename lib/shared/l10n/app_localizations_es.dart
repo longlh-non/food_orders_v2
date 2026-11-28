@@ -156,6 +156,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get orderMarkDelivered => 'Marcar como entregado';
 
   @override
+  String get statusFinished => 'Servido';
+
+  @override
+  String get orderMarkFinished => 'Marcar como servido';
+
+  @override
+  String get orderCheckPaidNote =>
+      'Por favor, compruebe si el pedido ha sido pagado';
+
+  @override
+  String get orderCancel => 'Cancelar pedido';
+
+  @override
+  String get orderCancelConfirm => '¿Cancelar este pedido?';
+
+  @override
+  String get orderCancelPaidNote =>
+      'Es posible que el cliente ya haya pagado. Gestione cualquier reembolso manualmente, fuera de la aplicación.';
+
+  @override
+  String get orderCancelFinalNote =>
+      'Un pedido cancelado no se puede restaurar.';
+
+  @override
+  String get orderChangeStatus => 'Cambiar estado';
+
+  @override
+  String get orderChangeStatusFinishedNote => 'Esto cambia el informe mensual.';
+
+  @override
+  String get orderChangeStatusNotAllowed =>
+      'No se puede cambiar el estado de este pedido.';
+
+  @override
+  String get orderChangeStatusCancelled =>
+      'El pedido está cancelado y no se puede cambiar.';
+
+  @override
   String get orderUnpaid => 'Sin pagar';
 
   @override

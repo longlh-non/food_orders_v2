@@ -143,6 +143,40 @@ class AppLocalizationsJa extends AppLocalizations {
   String get orderMarkDelivered => 'お渡し済みにする';
 
   @override
+  String get statusFinished => '提供済み';
+
+  @override
+  String get orderMarkFinished => '提供済みにする';
+
+  @override
+  String get orderCheckPaidNote => '注文が支払い済みかご確認ください';
+
+  @override
+  String get orderCancel => '注文をキャンセル';
+
+  @override
+  String get orderCancelConfirm => 'この注文をキャンセルしますか？';
+
+  @override
+  String get orderCancelPaidNote =>
+      'お客様はすでに支払っている可能性があります。返金はアプリ外で手作業で行ってください。';
+
+  @override
+  String get orderCancelFinalNote => 'キャンセルした注文は元に戻せません。';
+
+  @override
+  String get orderChangeStatus => 'ステータスを変更';
+
+  @override
+  String get orderChangeStatusFinishedNote => '月次レポートが変更されます。';
+
+  @override
+  String get orderChangeStatusNotAllowed => 'この注文のステータスは変更できません。';
+
+  @override
+  String get orderChangeStatusCancelled => 'この注文はキャンセル済みのため変更できません。';
+
+  @override
   String get orderUnpaid => '未払い';
 
   @override

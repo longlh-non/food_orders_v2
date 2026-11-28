@@ -360,6 +360,72 @@ abstract class AppLocalizations {
   /// **'Đánh dấu đã giao'**
   String get orderMarkDelivered;
 
+  /// Order status: the order has been served to the customer (the end of a normal order).
+  ///
+  /// In vi, this message translates to:
+  /// **'Đã phục vụ'**
+  String get statusFinished;
+
+  /// Button: staff mark an order as served.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đánh dấu đã phục vụ'**
+  String get orderMarkFinished;
+
+  /// Note on a card staff must check: please check whether the order has been paid.
+  ///
+  /// In vi, this message translates to:
+  /// **'Vui lòng kiểm tra nếu đơn hàng đã được thanh toán'**
+  String get orderCheckPaidNote;
+
+  /// Button: staff cancel an order.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hủy đơn'**
+  String get orderCancel;
+
+  /// Dialog title: confirm cancelling this order.
+  ///
+  /// In vi, this message translates to:
+  /// **'Hủy đơn này?'**
+  String get orderCancelConfirm;
+
+  /// Dialog line: the customer may already have paid; any refund is handled by hand outside the app.
+  ///
+  /// In vi, this message translates to:
+  /// **'Khách có thể đã thanh toán. Nếu có hoàn tiền, hãy xử lý thủ công ngoài ứng dụng.'**
+  String get orderCancelPaidNote;
+
+  /// Dialog line: a cancelled order cannot be changed back.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn đã hủy không thể đổi lại.'**
+  String get orderCancelFinalNote;
+
+  /// Button and dialog title: staff change an order status.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đổi trạng thái'**
+  String get orderChangeStatus;
+
+  /// Second line in the served confirmation dialog: this changes the monthly report.
+  ///
+  /// In vi, this message translates to:
+  /// **'Thao tác này sẽ thay đổi báo cáo tháng.'**
+  String get orderChangeStatusFinishedNote;
+
+  /// Snackbar: the server refused this status change for this order.
+  ///
+  /// In vi, this message translates to:
+  /// **'Không thể đổi trạng thái đơn này.'**
+  String get orderChangeStatusNotAllowed;
+
+  /// Snackbar: the order is cancelled and cannot be changed.
+  ///
+  /// In vi, this message translates to:
+  /// **'Đơn đã bị hủy nên không thể thay đổi.'**
+  String get orderChangeStatusCancelled;
+
   /// Text on an order card that has not been paid yet.
   ///
   /// In vi, this message translates to:

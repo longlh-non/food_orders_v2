@@ -14,6 +14,8 @@ const burgerJson = {
   'price': 9.5,
 };
 
+const staff = {'X-Staff-Id': 'boss-id', 'X-Staff-Password': 'hunter2-secret'};
+
 void main() {
   group('MenuItem.fromJson', () {
     test('parses a valid item', () {
@@ -191,7 +193,11 @@ void main() {
       );
 
       final orders = await api.fetchOrders();
-      final updated = await api.updateStatus('1', OrderStatus.ready);
+      final updated = await api.updateStatus(
+        '1',
+        OrderStatus.ready,
+        staffHeaders: staff,
+      );
 
       expect(orders.single.id, '1');
       expect(updated.status, OrderStatus.ready);

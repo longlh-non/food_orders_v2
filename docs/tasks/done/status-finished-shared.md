@@ -3,6 +3,7 @@ executor: task-executor
 scopes: [shared]
 workKinds: [flutter, documentation, quality-gate]
 blockedBy: [status-finished-contract]
+securityReview: required
 ---
 
 # Shared: `OrderStatus.finished`, staff headers on `updateStatus`, and the new strings in all 10 languages (additive)

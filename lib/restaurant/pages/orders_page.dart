@@ -241,7 +241,14 @@ class _OrdersPageState extends State<OrdersPage> {
   /// cache only changes after the server says yes.
   Future<void> _changeStatus(String id, OrderStatus status) async {
     try {
-      await OrderRepository.instance.updateStatus(id, status);
+      await OrderRepository.instance.updateStatus(
+        id,
+        status,
+        // Same remembered headers the payment buttons use; empty until staff
+        // have typed them once (the backend doesn't require them yet).
+        staffHeaders:
+            StaffCredentialsHolder.instance.value?.headers ?? const {},
+      );
     } on OrderRequestException {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;

@@ -45,6 +45,9 @@ Future<void> expectFailure(Future<Object?> call, int? statusCode) =>
       ),
     );
 
+/// Fake staff headers; the tests only check they are sent.
+const staff = {'X-Staff-Id': 'boss-id', 'X-Staff-Password': 'hunter2-secret'};
+
 void main() {
   group('placeOrder', () {
     test('200 with a valid order returns it', () async {
@@ -131,7 +134,11 @@ void main() {
           return json(order.copyWith(status: OrderStatus.ready).toJson());
         }),
       );
-      final updated = await api.updateStatus(order.id, OrderStatus.ready);
+      final updated = await api.updateStatus(
+        order.id,
+        OrderStatus.ready,
+        staffHeaders: staff,
+      );
       expect(updated.status, OrderStatus.ready);
       expect(sent.method, 'PATCH');
       expect(sent.url.path, '/api/orders/${order.id}');
@@ -146,7 +153,11 @@ void main() {
           return json(order.toJson());
         }),
       );
-      await api.updateStatus('../menu?x=1%zz', OrderStatus.ready);
+      await api.updateStatus(
+        '../menu?x=1%zz',
+        OrderStatus.ready,
+        staffHeaders: staff,
+      );
       expect(sent.url.pathSegments, ['api', 'orders', '../menu?x=1%zz']);
       expect(sent.url.hasQuery, isFalse);
       expect(sent.url.toString(), '/api/orders/..%2Fmenu%3Fx%3D1%25zz');
@@ -156,14 +167,20 @@ void main() {
       final api = clientAnswering(
         () async => http.Response('Order not found', 404),
       );
-      await expectFailure(api.updateStatus('nope', OrderStatus.ready), 404);
+      await expectFailure(
+        api.updateStatus('nope', OrderStatus.ready, staffHeaders: staff),
+        404,
+      );
     });
 
     test('no answer throws with no status', () async {
       final api = clientAnswering(
         () async => throw http.ClientException('Connection refused'),
       );
-      await expectFailure(api.updateStatus(order.id, OrderStatus.ready), null);
+      await expectFailure(
+        api.updateStatus(order.id, OrderStatus.ready, staffHeaders: staff),
+        null,
+      );
     });
   });
 
@@ -214,7 +231,10 @@ void main() {
         ),
       );
 
-      await expectFailure(repo.updateStatus(order.id, OrderStatus.ready), 500);
+      await expectFailure(
+        repo.updateStatus(order.id, OrderStatus.ready, staffHeaders: staff),
+        500,
+      );
 
       expect(repo.orders.single.status, OrderStatus.preparing);
     });
@@ -227,7 +247,7 @@ void main() {
         ),
       );
 
-      await repo.updateStatus(order.id, OrderStatus.ready);
+      await repo.updateStatus(order.id, OrderStatus.ready, staffHeaders: staff);
 
       expect(repo.orders.single.status, OrderStatus.ready);
     });

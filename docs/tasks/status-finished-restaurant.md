@@ -47,3 +47,7 @@ The login screen, session holder and logout (`staff-login-restaurant`), the `pai
 | One helper for all status sends; the session token is never shown, logged or put in an error | `code-reviewer`, `security-reviewer` (reviews) |
 | Every path to `paid` or `finished` shows the owner's sentence once; no other picker move shows a dialog except `cancelled` | the tests above; `code-reviewer` (review) |
 | Staff find the picker and the confirmations clear on the real tablet, and the extra dialog is not too slow in the kitchen | owner acceptance, "unverified" until done |
+
+## Note from `status-finished-shared` (2026-11-28)
+
+`OrdersPage._changeStatus` sends the remembered staff credentials, or an EMPTY header map when staff haven't typed any, because the backend does not check headers on `PATCH /orders/{id}` yet. When the staff check is enforced this call gets 401/403/429 and today the page shows one generic "update failed" snackbar and never prompts. Handling 401 (re-prompt or back to the login screen, and clear the stored credentials), 403 and 429 on the status-change path belongs to the restaurant card; do not deploy the backend check before it ships. A repeated tap after a 401 counts toward the 5-in-60-seconds lock, so the restaurant card must not let status buttons loop on a 401.
