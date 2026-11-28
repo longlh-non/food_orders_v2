@@ -35,7 +35,7 @@ void _fillTo(Database db, int n) {
   db.execute('''
     WITH RECURSIVE c(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM c WHERE i < $n)
     INSERT INTO orders (id, customer_name, status, placed_at, items_json)
-    SELECT 'real-' || i, 'x', 'delivered', '2026-01-01T10:00:00', '[]' FROM c
+    SELECT 'real-' || i, 'x', 'finished', '2026-01-01T10:00:00', '[]' FROM c
   ''');
 }
 
@@ -58,23 +58,23 @@ void main() {
     ];
     expect(stored.length, rows.length);
 
-    final expectedDelivered = rows
+    final expectedFinished = rows
         .where(
           (r) =>
-              r['status'] == 'delivered' &&
+              r['status'] == 'finished' &&
               (r['placedAt'] as String).startsWith('$_month-'),
         )
         .toList();
-    final delivered = deliveredOrders(stored, _month);
-    expect(delivered.length, expectedDelivered.length);
+    final finished = finishedOrders(stored, _month);
+    expect(finished.length, expectedFinished.length);
 
-    final days = dailyTotals(delivered, _month);
+    final days = dailyTotals(finished, _month);
     expect(days.length, 31);
-    expect(days.fold<int>(0, (n, d) => n + d.orders.length), delivered.length);
-    final expectedCash = expectedDelivered
+    expect(days.fold<int>(0, (n, d) => n + d.orders.length), finished.length);
+    final expectedCash = expectedFinished
         .where((r) => r['paymentMethod'] == 'cash')
         .fold<num>(0, (s, r) => s + orderTotal(r));
-    final expectedTransfer = expectedDelivered
+    final expectedTransfer = expectedFinished
         .where((r) => r['paymentMethod'] == 'bank_transfer')
         .fold<num>(0, (s, r) => s + orderTotal(r));
     expect(days.fold<num>(0, (s, d) => s + d.cash), expectedCash);
@@ -82,7 +82,7 @@ void main() {
     expect(expectedCash, greaterThan(0));
     expect(expectedTransfer, greaterThan(0));
     expect(days.where((d) => d.orders.isEmpty), isNotEmpty);
-    expect(daysWithOrders(delivered, _month).length, lessThan(31));
+    expect(daysWithOrders(finished, _month).length, lessThan(31));
   });
 
   test('both report builders make non-empty zip bytes from the data', () {
@@ -90,7 +90,7 @@ void main() {
     final stored = [
       for (final r in db.select('SELECT * FROM orders')) _fromRow(r),
     ];
-    final delivered = deliveredOrders(stored, _month);
+    final finished = finishedOrders(stored, _month);
     final shop = ShopSettings({
       'SHOP_NAME': 'QUÁN THỬ',
       'SHOP_TAX_CODE': '0000000000-999',
@@ -101,11 +101,11 @@ void main() {
     final summary = buildSummaryReport(
       shop: shop,
       month: _month,
-      days: dailyTotals(delivered, _month),
+      days: dailyTotals(finished, _month),
     );
     final detail = buildDetailReport(
       month: _month,
-      days: daysWithOrders(delivered, _month),
+      days: daysWithOrders(finished, _month),
     );
     for (final bytes in [summary, detail]) {
       expect(bytes.length, greaterThan(100));
@@ -139,7 +139,7 @@ void main() {
     _fillTo(db, 1);
     db.execute(
       "INSERT INTO orders (id, customer_name, status, placed_at, items_json) "
-      "VALUES ('mocking-bird', 'y', 'delivered', '2026-01-01T10:00:00', '[]')",
+      "VALUES ('mocking-bird', 'y', 'finished', '2026-01-01T10:00:00', '[]')",
     );
     seedMockOrders(db, _rows(db, ts: 1));
     final first =

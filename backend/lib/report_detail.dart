@@ -1,15 +1,15 @@
 import 'orders_report.dart' show DayTotals;
 import 'xlsx_writer.dart';
 
-/// The monthly "chi tiết" (detail) report: every delivered order of the
+/// The monthly "chi tiết" (detail) report: every finished order of the
 /// month, one row each, grouped by day. Pure: no database, no file, no
 /// route, no `dart:io`.
 ///
 /// [days] is what `daysWithOrders` (`orders_report.dart`) returns: one
-/// entry per day that has at least one delivered order (RPT2: empty days
+/// entry per day that has at least one finished order (RPT2: empty days
 /// are already dropped before this runs), each with its orders oldest
 /// first. This module only draws the days it is handed; it never calls
-/// `deliveredOrders`, `dailyTotals`, `daysWithOrders` or `describeOrder`
+/// `finishedOrders`, `dailyTotals`, `daysWithOrders` or `describeOrder`
 /// itself, so it never parses a raw stored order and can't hit a malformed
 /// row — that only happens one layer up, in whatever builds [days].
 
@@ -66,7 +66,7 @@ const _moneyColumn = CellStyle(
 final _monthPattern = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
 
 /// Builds the `.xlsx` bytes of the detail report for [month] (`YYYY-MM`)
-/// from [days]. A month with no delivered orders (`days` empty) gives just
+/// from [days]. A month with no finished orders (`days` empty) gives just
 /// the header rows (1-4).
 List<int> buildDetailReport({
   required String month,

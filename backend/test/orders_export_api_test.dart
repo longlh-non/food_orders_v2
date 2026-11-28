@@ -45,7 +45,7 @@ Map<String, dynamic> order(
   'items': [
     {'name': 'Xôi thịt', 'quantity': 2, 'price': price},
   ],
-  'status': 'delivered',
+  'status': 'finished',
   'placedAt': placedAt,
 };
 
@@ -269,7 +269,7 @@ void main() {
     void storeWith(
       String id,
       String placedAt, {
-      String status = 'delivered',
+      String status = 'finished',
       String? method,
       String customer = 'Khách Kín',
       List<Map<String, dynamic>>? items,
@@ -309,8 +309,8 @@ void main() {
         expect(response.headers['cache-control'], 'no-store');
         final wb = ReadWorkbook.read(await bytes(response));
         final values = allValues(wb);
-        // Delivered orders of November only: 2 x 25000 twice (the two
-        // seeded delivered orders), nothing from October or December.
+        // Finished orders of November only: 2 x 25000 twice (the two
+        // seeded finished orders), nothing from October or December.
         expect(
           report == 'summary' ? wb.sheetNames : wb.sheetNames.length,
           report == 'summary' ? ['gộp', 'tách'] : 1,
@@ -328,25 +328,22 @@ void main() {
       });
     }
 
-    test(
-      'detail: the delivered orders appear, other statuses do not',
-      () async {
-        storeWith(
-          'x-prep',
-          '2026-11-05T10:00:00.000',
-          status: 'preparing',
-          items: [
-            {'name': 'Món chưa giao', 'quantity': 1, 'price': 1},
-          ],
-        );
-        final wb = ReadWorkbook.read(
-          await bytes(await call('?month=2026-11&report=detail')),
-        );
-        final texts = allValues(wb).whereType<String>().join('|');
-        expect(texts, contains('Xôi thịt'));
-        expect(texts, isNot(contains('Món chưa giao')));
-      },
-    );
+    test('detail: the finished orders appear, other statuses do not', () async {
+      storeWith(
+        'x-prep',
+        '2026-11-05T10:00:00.000',
+        status: 'preparing',
+        items: [
+          {'name': 'Món chưa giao', 'quantity': 1, 'price': 1},
+        ],
+      );
+      final wb = ReadWorkbook.read(
+        await bytes(await call('?month=2026-11&report=detail')),
+      );
+      final texts = allValues(wb).whereType<String>().join('|');
+      expect(texts, contains('Xôi thịt'));
+      expect(texts, isNot(contains('Món chưa giao')));
+    });
 
     test('a cash, a transfer and an unmarked order land in the right '
         'columns', () async {
@@ -545,7 +542,7 @@ void main() {
 
       test('$report: unreadable items JSON -> 500', () async {
         db.execute(
-          "INSERT INTO orders VALUES ('broken', 'X', 'delivered', "
+          "INSERT INTO orders VALUES ('broken', 'X', 'finished', "
           "'2026-11-16T10:00:00.000', '{not json', NULL, NULL)",
         );
         expect((await call('?month=2026-11&report=$report')).statusCode, 500);
@@ -600,6 +597,7 @@ void main() {
             Request(
               method,
               Uri.parse('http://localhost$path'),
+              headers: method == 'PATCH' ? staffCreds(token) : null,
               body: body == null ? null : jsonEncode(body),
             ),
           ),
@@ -612,7 +610,7 @@ void main() {
     });
     expect(placed.statusCode, 200);
     expect(
-      (await call('PATCH', '/orders/new', {'status': 'ready'})).statusCode,
+      (await call('PATCH', '/orders/new', {'status': 'finished'})).statusCode,
       200,
     );
     expect(

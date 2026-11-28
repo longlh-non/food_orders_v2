@@ -22,6 +22,7 @@ const _bankEnv = <String, String?>{
 
 const _staffId = 'test-staff';
 const _staffPassword = 'staff-password-for-tests-1234';
+const _staff = {'x-staff-id': _staffId, 'x-staff-password': _staffPassword};
 
 Map<String, dynamic> _order(String id, {Map<String, dynamic>? extra}) => {
   'id': id,
@@ -71,7 +72,8 @@ void main() {
       Request(
         method,
         Uri.parse('http://localhost$path'),
-        headers: headers,
+        // PATCH is a staff route now: send the staff proof with it.
+        headers: method == 'PATCH' ? {..._staff, ...?headers} : headers,
         body: body is String || body == null ? body : jsonEncode(body),
       ),
     ),
@@ -289,7 +291,7 @@ void main() {
     test('an order stored by the old code reads back cash / null', () async {
       db.execute(
         'INSERT INTO orders (id, customer_name, status, placed_at, items_json) '
-        "VALUES ('old', 'Bao', 'delivered', '2026-10-01T10:00:00.000', '[]')",
+        "VALUES ('old', 'Bao', 'finished', '2026-10-01T10:00:00.000', '[]')",
       );
       final order = (await list()).single as Map;
       expect(order['paymentMethod'], 'cash');
@@ -363,48 +365,58 @@ void main() {
       },
     );
 
-    for (final target in [
-      'preparing',
-      'ready',
-      'delivered',
-      'awaiting_payment',
-    ]) {
-      test('awaiting_payment -> $target is 409 and changes nothing', () async {
+    for (final target in ['preparing', 'finished']) {
+      test('awaiting_payment -> $target is 200, clears the deadline', () async {
         await send('POST', '/orders', body: _transfer('t'));
         final r = await patch('t', target);
-        expect(r.statusCode, 409);
-        expect(await r.readAsString(), 'Use the payment routes');
-        final order = (await list()).single as Map;
-        expect(order['status'], 'awaiting_payment');
-        expect(order['paymentDueAt'], '2026-11-19T08:05:00.000Z');
+        expect(r.statusCode, 200);
+        final order = await json(r) as Map;
+        expect(order['status'], target);
+        expect(order['paymentMethod'], 'bank_transfer');
+        expect(order['paymentDueAt'], isNull);
       });
     }
 
-    test('preparing -> awaiting_payment is 409', () async {
-      await send('POST', '/orders', body: _order('c'));
-      expect((await patch('c', 'awaiting_payment')).statusCode, 409);
-      expect(((await list()).single as Map)['status'], 'preparing');
+    test('a transfer order already awaiting_payment: same status is a no-op '
+        '200', () async {
+      await send('POST', '/orders', body: _transfer('t'));
+      final r = await patch('t', 'awaiting_payment');
+      expect(r.statusCode, 200);
+      final order = (await list()).single as Map;
+      expect(order['status'], 'awaiting_payment');
+      expect(order['paymentDueAt'], '2026-11-19T08:05:00.000Z');
     });
 
-    test('preparing -> ready -> delivered still works', () async {
+    test(
+      'a transfer order can not be PATCHed back to awaiting_payment',
+      () async {
+        await send('POST', '/orders', body: _transfer('t'));
+        await patch('t', 'preparing');
+        final r = await patch('t', 'awaiting_payment');
+        expect(r.statusCode, 409);
+        expect(await r.readAsString(), 'Use the payment routes');
+        expect(((await list()).single as Map)['status'], 'preparing');
+      },
+    );
+
+    test('preparing -> finished -> preparing works', () async {
       await send('POST', '/orders', body: _order('c'));
-      for (final s in ['ready', 'delivered']) {
+      for (final s in ['finished', 'preparing']) {
         final r = await patch('c', s);
         expect(r.statusCode, 200);
         expect((await json(r))['status'], s);
       }
     });
 
-    test(
-      'pending and accepted are no longer statuses (400); unknown id 404',
-      () async {
-        await send('POST', '/orders', body: _order('c'));
-        expect((await patch('c', 'pending')).statusCode, 400);
-        expect((await patch('c', 'accepted')).statusCode, 400);
-        expect((await patch('nope', 'ready')).statusCode, 404);
-        expect((await patch('nope', 'awaiting_payment')).statusCode, 404);
-      },
-    );
+    test('pending, accepted, ready, delivered are not statuses (400); unknown '
+        'id 404', () async {
+      await send('POST', '/orders', body: _order('c'));
+      for (final s in ['pending', 'accepted', 'ready', 'delivered']) {
+        expect((await patch('c', s)).statusCode, 400, reason: s);
+      }
+      expect((await patch('nope', 'finished')).statusCode, 404);
+      expect((await patch('nope', 'awaiting_payment')).statusCode, 404);
+    });
 
     test('a cash order cancelled keeps paymentDueAt null', () async {
       await send('POST', '/orders', body: _order('c'));
@@ -418,7 +430,7 @@ void main() {
         await send('POST', '/orders', body: _transfer('t'));
         expect((await patch('t', 'cancelled')).statusCode, 200);
         final before = db.select('SELECT * FROM orders').single;
-        for (final target in ['preparing', 'ready', 'delivered']) {
+        for (final target in ['preparing', 'finished', 'awaiting_payment']) {
           final r = await patch('t', target);
           expect(r.statusCode, 409, reason: target);
           expect(await r.readAsString(), 'Use the payment routes');
@@ -427,7 +439,8 @@ void main() {
       },
     );
 
-    test('an expiry-cancelled row cannot leave cancelled and keeps its deadline', () async {
+    test('an expiry-cancelled row cannot leave cancelled; a staff cancel '
+        'clears its deadline', () async {
       db.execute(
         'INSERT INTO orders (id, customer_name, status, placed_at, items_json, '
         'payment_method, payment_due_at) VALUES (\'e\', \'A\', \'cancelled\', '
@@ -438,75 +451,82 @@ void main() {
       var row = db.select('SELECT * FROM orders').single;
       expect(row['status'], 'cancelled');
       expect(row['payment_due_at'], '2026-11-19T08:05:00.000Z');
-      // Cancelling again is allowed and keeps the deadline.
+      // Cancelling again is a real staff cancel (owner, option A).
       expect((await patch('e', 'cancelled')).statusCode, 200);
       row = db.select('SELECT * FROM orders').single;
-      expect(row['payment_due_at'], '2026-11-19T08:05:00.000Z');
+      expect(row['status'], 'cancelled');
+      expect(row['payment_due_at'], isNull);
     });
 
-    test('a cancelled cash order can still be PATCHed back', () async {
-      await send('POST', '/orders', body: _order('c'));
-      await patch('c', 'cancelled');
-      final r = await patch('c', 'preparing');
-      expect(r.statusCode, 200);
-      expect((await json(r))['status'], 'preparing');
-    });
+    test(
+      'a cancelled cash order can no longer be PATCHed back (409)',
+      () async {
+        await send('POST', '/orders', body: _order('c'));
+        await patch('c', 'cancelled');
+        final r = await patch('c', 'preparing');
+        expect(r.statusCode, 409);
+        expect(await r.readAsString(), "A cancelled order can't be changed");
+      },
+    );
   });
 
   group('migration', () {
-    test('a fresh database reaches version 8', () {
-      expect(db.userVersion, 8);
+    test('a fresh database reaches version 9', () {
+      expect(db.userVersion, 9);
     });
 
-    test('version 6 -> 8 keeps every row, only pending/accepted change', () {
-      final v6 = openDatabase(':memory:');
-      addTearDown(v6.close);
-      v6.execute('ALTER TABLE orders DROP COLUMN payment_method');
-      v6.execute('ALTER TABLE orders DROP COLUMN payment_due_at');
-      v6.userVersion = 6;
-      const statuses = [
-        'pending',
-        'accepted',
-        'preparing',
-        'delivered',
-        'cancelled',
-      ];
-      for (final (i, s) in statuses.indexed) {
-        v6.execute('INSERT INTO orders VALUES (?, ?, ?, ?, ?)', [
-          'o$i',
-          'Bao',
-          s,
-          '2026-11-0${i + 1}T09:00:00.000',
-          '[]',
+    test(
+      'version 6 -> 9 keeps every row; pending/accepted/delivered change',
+      () {
+        final v6 = openDatabase(':memory:');
+        addTearDown(v6.close);
+        v6.execute('ALTER TABLE orders DROP COLUMN payment_method');
+        v6.execute('ALTER TABLE orders DROP COLUMN payment_due_at');
+        v6.userVersion = 6;
+        const statuses = [
+          'pending',
+          'accepted',
+          'preparing',
+          'delivered',
+          'cancelled',
+        ];
+        for (final (i, s) in statuses.indexed) {
+          v6.execute('INSERT INTO orders VALUES (?, ?, ?, ?, ?)', [
+            'o$i',
+            'Bao',
+            s,
+            '2026-11-0${i + 1}T09:00:00.000',
+            '[]',
+          ]);
+        }
+
+        migrate(v6);
+
+        expect(v6.userVersion, 9);
+        final rows = v6.select(
+          'SELECT id, status, payment_method, payment_due_at FROM orders ORDER BY rowid',
+        );
+        expect(rows.map((r) => r['id']), ['o0', 'o1', 'o2', 'o3', 'o4']);
+        expect(rows.map((r) => r['status']), [
+          'preparing',
+          'preparing',
+          'preparing',
+          'finished',
+          'cancelled',
         ]);
-      }
-
-      migrate(v6);
-
-      expect(v6.userVersion, 8);
-      final rows = v6.select(
-        'SELECT id, status, payment_method, payment_due_at FROM orders ORDER BY rowid',
-      );
-      expect(rows.map((r) => r['id']), ['o0', 'o1', 'o2', 'o3', 'o4']);
-      expect(rows.map((r) => r['status']), [
-        'preparing',
-        'preparing',
-        'preparing',
-        'delivered',
-        'cancelled',
-      ]);
-      expect(rows.every((r) => r['payment_method'] == null), isTrue);
-      expect(rows.every((r) => r['payment_due_at'] == null), isTrue);
-      migrate(v6);
-      expect(v6.select('SELECT id FROM orders'), hasLength(5));
-    });
+        expect(rows.every((r) => r['payment_method'] == null), isTrue);
+        expect(rows.every((r) => r['payment_due_at'] == null), isTrue);
+        migrate(v6);
+        expect(v6.select('SELECT id FROM orders'), hasLength(5));
+      },
+    );
   });
 
   group('export', () {
     test('the CSV ignores the payment fields', () async {
       db.execute(
         'INSERT INTO orders (id, customer_name, status, placed_at, items_json) '
-        "VALUES ('old', 'Bao', 'delivered', '2026-11-01T09:00:00.000', "
+        "VALUES ('old', 'Bao', 'finished', '2026-11-01T09:00:00.000', "
         '\'[{"name":"Trà","quantity":1,"price":4000}]\')',
       );
       await send('POST', '/orders', body: _order('cash1'));

@@ -5,10 +5,19 @@ import 'dart:io';
 import 'package:food_orders_backend/database.dart';
 import 'package:food_orders_backend/no_sniff.dart';
 import 'package:food_orders_backend/orders_api.dart';
+import 'package:food_orders_backend/staff_gate.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:sqlite3/sqlite3.dart';
 import 'package:test/test.dart';
+
+const staffHeaders = {
+  'x-staff-id': 'test-staff',
+  'x-staff-password': 'staff-password-for-tests-1234',
+};
+
+StaffGate testGate() =>
+    StaffGate(id: 'test-staff', password: 'staff-password-for-tests-1234');
 
 /// Same shape as `Order.toJson()` in lib/shared/models/order.dart.
 Map<String, dynamic> sampleOrder(String id) => {
@@ -44,7 +53,7 @@ void main() {
 
   setUp(() {
     db = openDatabase(':memory:');
-    api = OrdersApi(db);
+    api = OrdersApi(db, staffGate: testGate());
     handler = api.handler;
   });
 
@@ -59,6 +68,7 @@ void main() {
         Request(
           method,
           Uri.parse('http://localhost$path'),
+          headers: staffHeaders,
           body: body is String
               ? body
               : (body == null ? null : jsonEncode(body)),
@@ -79,7 +89,7 @@ void main() {
       db.execute('BEGIN');
       final insert = db.prepare(
         'INSERT INTO orders (id, customer_name, status, placed_at, items_json) '
-        "VALUES (?, 'Bulk', 'delivered', '2026-11-01T08:00:00.000', '[]')",
+        "VALUES (?, 'Bulk', 'finished', '2026-11-01T08:00:00.000', '[]')",
       );
       for (var i = 0; i < n; i++) {
         insert.execute(['bulk-$i']);
@@ -238,13 +248,14 @@ void main() {
               Request(
                 method,
                 Uri.parse('http://localhost$path'),
+                headers: staffHeaders,
                 body: body == null ? null : jsonEncode(body),
               ),
             ),
           );
 
       final bad = await call('POST', '/orders', {'nope': 1});
-      final missing = await call('PATCH', '/orders/x', {'status': 'ready'});
+      final missing = await call('PATCH', '/orders/x', {'status': 'finished'});
       final ok = await call('GET', '/orders');
 
       expect(bad.statusCode, 400);
@@ -626,10 +637,10 @@ void main() {
       final response = await send(
         'PATCH',
         '/orders/1',
-        body: {'status': 'ready'},
+        body: {'status': 'finished'},
       );
 
-      final expected = {...sampleOrder('1'), 'status': 'ready'};
+      final expected = {...sampleOrder('1'), 'status': 'finished'};
       expect(response.statusCode, 200);
       expect(await readJson(response), stored(expected));
       expect(await listOrders(), [stored(expected)]);
@@ -640,14 +651,14 @@ void main() {
         'PATCH',
         '/orders/1',
         body: {
-          'status': 'ready',
+          'status': 'finished',
           'id': 'other',
           'customerName': 'x',
           'items': [],
         },
       );
 
-      final expected = {...sampleOrder('1'), 'status': 'ready'};
+      final expected = {...sampleOrder('1'), 'status': 'finished'};
       expect(response.statusCode, 200);
       expect(await readJson(response), stored(expected));
       expect(await listOrders(), [stored(expected)]);
@@ -680,7 +691,7 @@ void main() {
       final response = await send(
         'PATCH',
         '/orders/missing',
-        body: {'status': 'ready'},
+        body: {'status': 'finished'},
       );
 
       expect(response.statusCode, 404);
@@ -732,6 +743,7 @@ void main() {
           Request(
             method,
             Uri.parse('http://localhost$path'),
+            headers: staffHeaders,
             body: body == null ? null : jsonEncode(body),
           ),
         ),
@@ -740,44 +752,44 @@ void main() {
 
     test('orders and status changes survive closing and reopening', () async {
       final firstDb = openDatabase(dbPath);
-      final first = OrdersApi(firstDb);
+      final first = OrdersApi(firstDb, staffGate: testGate());
       await sendTo(first, 'POST', '/orders', body: sampleOrder('1'));
       await sendTo(first, 'POST', '/orders', body: sampleOrder('2'));
-      await sendTo(first, 'PATCH', '/orders/1', body: {'status': 'ready'});
+      await sendTo(first, 'PATCH', '/orders/1', body: {'status': 'finished'});
       await first.close();
       firstDb.close();
 
       final reopenedDb = openDatabase(dbPath);
       addTearDown(reopenedDb.close);
-      final reopened = OrdersApi(reopenedDb);
+      final reopened = OrdersApi(reopenedDb, staffGate: testGate());
       addTearDown(reopened.close);
       final response = await sendTo(reopened, 'GET', '/orders');
 
       expect(jsonDecode(await response.readAsString()), [
         stored(sampleOrder('2')),
-        stored({...sampleOrder('1'), 'status': 'ready'}),
+        stored({...sampleOrder('1'), 'status': 'finished'}),
       ]);
     });
 
     // Was 1, then 2 (menu_items), 3 (categories and toppings), 4 (the
-    // nibble category), 5 (menu pictures), now 6 (sold out).
-    test('a fresh file gets user_version 8', () {
+    // nibble category), 5 (menu pictures), 6 (sold out), 7 and 8 (payment), now 9 (finished).
+    test('a fresh file gets user_version 9', () {
       final fileDb = openDatabase(dbPath);
       addTearDown(fileDb.close);
 
-      expect(fileDb.userVersion, 8);
+      expect(fileDb.userVersion, 9);
     });
 
     test('reopening does not re-run the migration or lose data', () async {
       final firstDb = openDatabase(dbPath);
-      final first = OrdersApi(firstDb);
+      final first = OrdersApi(firstDb, staffGate: testGate());
       await sendTo(first, 'POST', '/orders', body: sampleOrder('1'));
       await first.close();
       firstDb.close();
 
       final reopenedDb = openDatabase(dbPath);
       addTearDown(reopenedDb.close);
-      expect(reopenedDb.userVersion, 8);
+      expect(reopenedDb.userVersion, 9);
       expect(reopenedDb.select('SELECT id FROM orders').length, 1);
     });
 

@@ -58,7 +58,7 @@ void main() {
           (r['customerName'] as String).length,
           lessThanOrEqualTo(maxNameLength),
         );
-        expect(['delivered', 'cancelled'], contains(r['status']));
+        expect(['finished', 'cancelled'], contains(r['status']));
         expect(orderStatuses, contains(r['status']));
         expect(paymentMethods, contains(r['paymentMethod']));
         expect(r['paymentDueAt'], isNull);
@@ -91,7 +91,7 @@ void main() {
 
   test('mixes statuses and methods, and uses toppings', () {
     final rows = _build();
-    expect(rows.map((r) => r['status']).toSet(), {'delivered', 'cancelled'});
+    expect(rows.map((r) => r['status']).toSet(), {'finished', 'cancelled'});
     expect(rows.map((r) => r['paymentMethod']).toSet(), paymentMethods);
     final withTop = rows
         .expand((r) => r['items'] as List)
@@ -122,7 +122,7 @@ void main() {
       {'2026-09-30', '2026-11-01'},
     );
     for (final r in outside) {
-      expect(['delivered', 'cancelled'], contains(r['status']));
+      expect(['finished', 'cancelled'], contains(r['status']));
       expect(r['items'], isNotEmpty);
     }
   });

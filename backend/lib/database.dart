@@ -32,7 +32,8 @@ Database openDatabase(String path) {
 /// Steps so far: 1 `orders` table; 2 `menu_items` with placeholder items;
 /// 3 categories, toppings and the real menu; 4 the `nibble` category;
 /// 5 `image` column; 6 `available` column; 7 payment columns on `orders`;
-/// 8 `pending`/`accepted` orders become `preparing`.
+/// 8 `pending`/`accepted` orders become `preparing`;
+/// 9 `delivered` orders become `finished`, `ready` orders become `preparing`.
 void migrate(Database db) {
   // Step 1: the `orders` table (id, customer name, status, placement time, and
   // the items as one JSON string).
@@ -285,6 +286,27 @@ void migrate(Database db) {
         "WHERE status IN ('pending', 'accepted')",
       );
       db.userVersion = 8;
+      db.execute('COMMIT');
+    } catch (_) {
+      db.execute('ROLLBACK');
+      rethrow;
+    }
+  }
+
+  // Step 9: the statuses `delivered` and `ready` are gone (SF3): a stored
+  // `delivered` order becomes `finished`, a stored `ready` order becomes
+  // `preparing`. `orders.status` has no CHECK, so the table is not rebuilt.
+  // Can't be undone: make a dated backup first.
+  if (db.userVersion < 9) {
+    db.execute('BEGIN');
+    try {
+      db.execute(
+        "UPDATE orders SET status = 'finished' WHERE status = 'delivered'",
+      );
+      db.execute(
+        "UPDATE orders SET status = 'preparing' WHERE status = 'ready'",
+      );
+      db.userVersion = 9;
       db.execute('COMMIT');
     } catch (_) {
       db.execute('ROLLBACK');

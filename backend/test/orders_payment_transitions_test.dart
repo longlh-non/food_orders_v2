@@ -71,7 +71,8 @@ void main() {
       Request(
         method,
         Uri.parse('http://localhost$path'),
-        headers: headers,
+        // PATCH is a staff route now: send the staff proof with it.
+        headers: method == 'PATCH' ? {..._staff, ...?headers} : headers,
         body: body is String || body == null ? body : jsonEncode(body),
       ),
     ),
@@ -347,14 +348,14 @@ void main() {
     });
 
     test(
-      'live not due, staff-cancelled, cash, preparing, delivered -> 409',
+      'live not due, staff-cancelled, cash, preparing, finished -> 409',
       () async {
         await place(_transfer('live'));
         await place(_transfer('sc'));
         await send('PATCH', '/orders/sc', body: {'status': 'cancelled'});
         await place(_order('cash'));
         await place(_order('del'));
-        await send('PATCH', '/orders/del', body: {'status': 'delivered'});
+        await send('PATCH', '/orders/del', body: {'status': 'finished'});
         for (final id in ['live', 'sc', 'cash', 'del']) {
           expect((await renew(id)).statusCode, 409, reason: id);
         }
@@ -474,7 +475,7 @@ void main() {
       await send('PATCH', '/orders/cc', body: {'status': 'cancelled'});
       await place(_transfer('paid'));
       await confirm('paid');
-      await send('PATCH', '/orders/paid', body: {'status': 'ready'});
+      await send('PATCH', '/orders/paid', body: {'status': 'finished'});
       for (final id in ['sc', 'cash', 'cc', 'paid']) {
         expect((await staffSwitch(id)).statusCode, 409, reason: id);
       }

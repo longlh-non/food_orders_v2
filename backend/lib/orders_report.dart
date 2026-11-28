@@ -1,7 +1,7 @@
 import 'orders_export.dart' show isValidMonth, ordersInMonth;
 
 /// The numbers behind the two Excel reports (`backend-report-summary-xlsx`,
-/// `backend-report-detail-xlsx`): which delivered orders fall in a month,
+/// `backend-report-detail-xlsx`): which finished orders fall in a month,
 /// grouped by day, cash versus bank transfer. Pure functions only: no
 /// database, no files, no spreadsheet, no `dart:io`. The layout cards only
 /// draw what this returns.
@@ -10,7 +10,7 @@ import 'orders_export.dart' show isValidMonth, ordersInMonth;
 /// (same month rule as the CSV export: `placedAt` as written, RPT3) rather
 /// than copying them. The CSV code itself is untouched.
 
-/// One delivered order, in the shape the reports need. [method] is always
+/// One finished order, in the shape the reports need. [method] is always
 /// `'cash'` or `'bank_transfer'` (an order with no payment method counts
 /// as cash, PAY6).
 class ReportOrder {
@@ -34,7 +34,7 @@ class ReportOrder {
   final String method;
 }
 
-/// One calendar day of a month's report: the delivered orders placed that
+/// One calendar day of a month's report: the finished orders placed that
 /// day (oldest first) and their totals. Every day of the month gets one of
 /// these from [dailyTotals], even with no orders (the summary report shows
 /// all of them); [daysWithOrders] then drops the empty ones for the detail
@@ -53,23 +53,23 @@ class DayTotals {
   final num cash;
   final num transfer;
 
-  /// This day's delivered orders, oldest first.
+  /// This day's finished orders, oldest first.
   final List<ReportOrder> orders;
 
   num get total => cash + transfer;
 }
 
-/// Delivered orders placed in [month] (`YYYY-MM`), oldest first (ties kept
+/// Finished orders placed in [month] (`YYYY-MM`), oldest first (ties kept
 /// in [orders]' own order, via [ordersInMonth]). Every other status
-/// (`awaiting_payment`, `preparing`, `ready`, `cancelled`) is excluded.
-List<ReportOrder> deliveredOrders(
+/// (`awaiting_payment`, `preparing`, `cancelled`) is excluded.
+List<ReportOrder> finishedOrders(
   List<Map<String, dynamic>> orders,
   String month,
 ) {
   _checkMonth(month);
   return [
     for (final order in ordersInMonth(orders, month))
-      if (order['status'] == 'delivered')
+      if (order['status'] == 'finished')
         ReportOrder(
           day: _day(order['placedAt'] as String),
           description: describeOrder(order),
@@ -146,8 +146,8 @@ int daysInMonth(String month) {
 }
 
 /// One entry for every calendar day of [month] (the summary report shows
-/// all of them, even with 0), each with that day's delivered [orders] (as
-/// returned by [deliveredOrders], oldest first) split into [DayTotals.cash]
+/// all of them, even with 0), each with that day's finished [orders] (as
+/// returned by [finishedOrders], oldest first) split into [DayTotals.cash]
 /// and [DayTotals.transfer].
 List<DayTotals> dailyTotals(List<ReportOrder> orders, String month) {
   final byDay = <String, List<ReportOrder>>{};
@@ -176,7 +176,7 @@ DayTotals _dayTotals(
   return DayTotals(day: key, cash: cash, transfer: transfer, orders: dayOrders);
 }
 
-/// Only the days of [month] that have at least one delivered order, in
+/// Only the days of [month] that have at least one finished order, in
 /// date order — what the detail report shows (RPT2: empty days are
 /// skipped, unlike the summary).
 List<DayTotals> daysWithOrders(List<ReportOrder> orders, String month) => [

@@ -240,7 +240,7 @@ class OrdersApi {
     final router = Router();
 
     // GET /orders/export (staff only): one month of orders as a CSV file for
-    // Excel, or with `report=summary|detail` an xlsx report of the delivered
+    // Excel, or with `report=summary|detail` an xlsx report of the finished
     // orders. Checked in this order: staff ID and password (403 staff routes
     // disabled, 401 wrong, 429 locked), `month` = YYYY-MM (400), `report`
     // (400 for anything but absent, `summary` or `detail`; the old `format`
@@ -310,10 +310,10 @@ class OrdersApi {
         }
       }
       if (report != null) {
-        final delivered = <ReportOrder>[];
+        final finished = <ReportOrder>[];
         for (final order in ordersInMonth(orders, month)) {
           try {
-            delivered.addAll(deliveredOrders([order], month));
+            finished.addAll(finishedOrders([order], month));
           } on TypeError {
             return _exportFailed(order['id']);
           }
@@ -324,13 +324,13 @@ class OrdersApi {
           bytes = buildSummaryReport(
             shop: _settings,
             month: month,
-            days: dailyTotals(delivered, month),
+            days: dailyTotals(finished, month),
           );
           fileName = 'bao-cao-tong-hop-$month.xlsx';
         } else {
           bytes = buildDetailReport(
             month: month,
-            days: daysWithOrders(delivered, month),
+            days: daysWithOrders(finished, month),
           );
           fileName = 'chi-tiet-$month.xlsx';
         }
@@ -418,13 +418,17 @@ class OrdersApi {
       return _json(stored);
     });
 
-    // PATCH /orders/{id}: change the status. Answers 200 with the updated
-    // order, 400 when `status` is missing or not a known status (or the body
-    // is not a JSON object), 404 unknown id, 409 "Use the payment routes".
-    // The order is sent to the stream.
-    // Only `status` can change after an order is placed. Any other field in
-    // the body is ignored, so a client can't rewrite items, prices, or ids.
+    // PATCH /orders/{id} (staff only): change the status. The staff check
+    // comes first, before the body is read and before the lookup (401 / 403 /
+    // 429). Then 400 when `status` is missing or not a known status (or the
+    // body is not a JSON object), 404 unknown id, 409 by the rules below, 200
+    // the updated order. A changed order is sent to the stream.
+    // Only `status` can change (and `paymentDueAt` is cleared by a change);
+    // any other field in the body is ignored, and the payment method is never
+    // touched.
     router.patch('/orders/<id>', (Request req, String id) async {
+      final denied = _gate.check(req);
+      if (denied != null) return denied;
       final body = await _readJsonObject(req);
       if (body == null) return _badRequest();
       final status = body['status'];
@@ -433,31 +437,48 @@ class OrdersApi {
       }
       final current = _findOrder(id);
       if (current == null) return Response.notFound('Order not found');
-      // `awaiting_payment` exists only through POST. An order in it can only
-      // be cancelled here, and a cancelled bank transfer order can't be
-      // revived here: payment has its own routes, so a status button can't
-      // skip the payment step. Cash orders move freely as before.
-      final wasAwaiting = current['status'] == statusAwaitingPayment;
+      final from = current['status'] as String;
       final isTransfer = current['paymentMethod'] == paymentBankTransfer;
-      final leavesCancelled =
-          current['status'] == statusCancelled && status != statusCancelled;
-      if (status == statusAwaitingPayment ||
-          (wasAwaiting && status != statusCancelled) ||
-          (isTransfer && leavesCancelled)) {
+
+      // Same status: nothing changes, and this wins over the rules below.
+      // One exception: cancelled -> cancelled on an order that still has its
+      // deadline (cancelled by the expiry) is a real staff cancel that ends
+      // the customer's renew / switch-to-cash window by clearing it.
+      if (status == from) {
+        if (from == statusCancelled && current['paymentDueAt'] != null) {
+          _db.execute(
+            'UPDATE orders SET payment_due_at = NULL '
+            'WHERE id = ? AND status = ?',
+            [id, statusCancelled],
+          );
+          final updated = _publishIfChanged(id);
+          return updated == null ? _conflict() : _json(updated);
+        }
+        return _json(current);
+      }
+      // A cancelled order of any kind is final.
+      if (from == statusCancelled) {
+        return Response(
+          409,
+          body: isTransfer
+              ? 'Use the payment routes'
+              : "A cancelled order can't be changed",
+        );
+      }
+      // `awaiting_payment` is reached by a bank transfer order only through
+      // POST. A cash order may be put there by staff; it stays cash.
+      if (status == statusAwaitingPayment && isTransfer) {
         return Response(409, body: 'Use the payment routes');
       }
-      // Only a staff cancel of an unpaid order clears the deadline, so a
-      // `cancelled` order that still has one was cancelled by the expiry.
-      final clearsDeadline = wasAwaiting && status == statusCancelled;
+      // One guarded write: only if the status is still the one just read. A
+      // change always clears the deadline; the method is never written.
       _db.execute(
-        clearsDeadline
-            ? 'UPDATE orders SET status = ?, payment_due_at = NULL WHERE id = ?'
-            : 'UPDATE orders SET status = ? WHERE id = ?',
-        [status, id],
+        'UPDATE orders SET status = ?, payment_due_at = NULL '
+        'WHERE id = ? AND status = ?',
+        [status, id, from],
       );
-      final order = _findOrder(id)!;
-      _events.add(order);
-      return _json(order);
+      final updated = _publishIfChanged(id);
+      return updated == null ? _conflict() : _json(updated);
     });
 
     // POST /orders/{id}/switch-to-cash (customer, no staff ID): switch an
@@ -727,16 +748,21 @@ Future<Map<String, dynamic>?> _readJsonObject(Request req) async {
 
 /// Valid order status names. `backend/` can't import the Flutter code, so
 /// this is a copy of `OrderStatus` in lib/shared/models/order.dart — keep
-/// the two lists in sync.
+/// the two lists in sync. (`ready` and `delivered` no longer exist: schema
+/// step 9 turned them into `preparing` and `finished`. `paid` comes with the
+/// static QR work.)
 const orderStatuses = {
   statusAwaitingPayment,
   'preparing',
-  'ready',
-  'delivered',
+  statusFinished,
   statusCancelled,
 };
 
-/// The status of an unpaid bank transfer order; it exists only through POST.
+/// The status of a served order; the Excel reports count only these.
+const statusFinished = 'finished';
+
+/// The status of an unpaid order. A bank transfer order gets it only through
+/// POST; staff may also put a cash order there.
 const statusAwaitingPayment = 'awaiting_payment';
 
 /// The status staff cancel to, and the expiry sweep sets.

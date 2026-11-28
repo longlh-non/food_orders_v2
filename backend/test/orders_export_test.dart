@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 Map<String, dynamic> order(
   String id,
   String placedAt, {
-  String status = 'delivered',
+  String status = 'finished',
   String customer = 'Bao',
   List<Map<String, dynamic>>? items,
 }) => {
@@ -147,11 +147,19 @@ void main() {
             40000,
             'Thêm trứng; Thêm chả',
             80000,
-            'delivered',
+            'finished',
           ],
         ]);
       },
     );
+
+    test('a finished order writes the raw status `finished`', () {
+      final row = exportRows([
+        order('1', '2026-11-01T08:00:00.000', status: 'finished'),
+      ]).single;
+
+      expect(row.last, 'finished');
+    });
 
     test('an old line without id or toppings works', () {
       final row = exportRows([order('1', '2026-11-01T08:00:00.000')]).single;
@@ -373,7 +381,7 @@ void main() {
   group('summarise', () {
     test('totals per status; cancelled left out of the grand total', () {
       final s = summarise([
-        order('1', '2026-11-01T08:00:00.000'), // delivered 25000
+        order('1', '2026-11-01T08:00:00.000'), // finished 25000
         order(
           '2',
           '2026-11-02T08:00:00.000',
@@ -396,7 +404,7 @@ void main() {
       expect(s.orders, 3);
       expect(s.lines, 4);
       expect(s.totalsByStatus, {
-        'delivered': 25000,
+        'finished': 25000,
         'cancelled': 30000,
         'pending': 14000,
       });

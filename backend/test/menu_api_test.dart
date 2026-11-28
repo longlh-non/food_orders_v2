@@ -112,7 +112,13 @@ void main() {
     late Handler combined;
 
     setUp(() {
-      orders = OrdersApi(db);
+      orders = OrdersApi(
+        db,
+        staffGate: StaffGate(
+          id: 'test-staff',
+          password: 'staff-password-for-tests-1234',
+        ),
+      );
       combined = Cascade().add(handler).add(orders.handler).handler;
     });
 
@@ -188,7 +194,11 @@ void main() {
           Request(
             'PATCH',
             Uri.parse('http://localhost/orders/nope'),
-            body: jsonEncode({'status': 'ready'}),
+            headers: {
+              'x-staff-id': 'test-staff',
+              'x-staff-password': 'staff-password-for-tests-1234',
+            },
+            body: jsonEncode({'status': 'finished'}),
           ),
         ),
       );
@@ -207,8 +217,8 @@ void main() {
 
   group('schema steps 2 and 3 (menu_items, toppings)', () {
     // Now 6: later steps run too (4 nibble, 5 pictures, 6 sold out).
-    test('a fresh database ends at user_version 8 with the real menu', () {
-      expect(db.userVersion, 8);
+    test('a fresh database ends at user_version 9 with the real menu', () {
+      expect(db.userVersion, 9);
       expect(
         db.select('SELECT id FROM menu_items'),
         hasLength(seedMenu.length),
@@ -257,7 +267,7 @@ void main() {
 
         migrate(v1);
 
-        expect(v1.userVersion, 8);
+        expect(v1.userVersion, 9);
         expect(
           v1.select('SELECT id FROM menu_items'),
           hasLength(seedMenu.length),
@@ -351,7 +361,7 @@ void main() {
       migrate(v2);
 
       final ids = v2.select('SELECT id FROM menu_items').map((r) => r['id']);
-      expect(v2.userVersion, 8);
+      expect(v2.userVersion, 9);
       for (final old in removedInStep3) {
         expect(ids, isNot(contains(old)), reason: old);
       }
@@ -382,7 +392,7 @@ void main() {
 
       final row = v2.select("SELECT name FROM menu_items WHERE id = 'tra-da'");
       expect(row.single['name'], 'Owner item');
-      expect(v2.userVersion, 8);
+      expect(v2.userVersion, 9);
     });
 
     test('a failed step 3 rolls back completely and leaves version 2', () {
@@ -573,8 +583,8 @@ void main() {
         Map.of(row),
     ];
 
-    test('a fresh database (now version 8) has no Ăn vặt items', () {
-      expect(db.userVersion, 8);
+    test('a fresh database (now version 9) has no Ăn vặt items', () {
+      expect(db.userVersion, 9);
       expect(
         db.select('SELECT id FROM menu_items'),
         hasLength(seedMenu.length),
@@ -596,7 +606,7 @@ void main() {
 
       // Steps 5 and 6 run too and add `image` (NULL) and `available` (1);
       // every other column is kept.
-      expect(v3.userVersion, 8);
+      expect(v3.userVersion, 9);
       expect([
         for (final row in allRows(v3, 'menu_items'))
           Map.of(row)
@@ -645,7 +655,7 @@ void main() {
 
       migrate(v3);
 
-      expect(v3.userVersion, 8);
+      expect(v3.userVersion, 9);
       expect(allRows(v3, 'menu_items'), after);
     });
 
@@ -855,7 +865,7 @@ void main() {
       });
     }
 
-    test('a version 4 file migrates (now to 8) and keeps everything', () {
+    test('a version 4 file migrates (now to 9) and keeps everything', () {
       final v4 = versionFourDatabase();
       addTearDown(v4.close);
       final menuBefore = allRows(v4, 'menu_items');
@@ -864,7 +874,7 @@ void main() {
 
       migrate(v4);
 
-      expect(v4.userVersion, 8);
+      expect(v4.userVersion, 9);
       expect([
         for (final row in allRows(v4, 'menu_items'))
           Map.of(row)
@@ -890,7 +900,7 @@ void main() {
 
       migrate(v4);
 
-      expect(v4.userVersion, 8);
+      expect(v4.userVersion, 9);
       expect(allRows(v4, 'menu_items'), after);
     });
   });
@@ -967,7 +977,7 @@ void main() {
       });
     }
 
-    test('a version 5 file migrates to 8 and keeps everything', () {
+    test('a version 5 file migrates to 9 and keeps everything', () {
       final v5 = versionFiveDatabase();
       addTearDown(v5.close);
       final menuBefore = allRows(v5, 'menu_items');
@@ -976,7 +986,7 @@ void main() {
 
       migrate(v5);
 
-      expect(v5.userVersion, 8);
+      expect(v5.userVersion, 9);
       expect([
         for (final row in allRows(v5, 'menu_items'))
           Map.of(row)..remove('available'),
@@ -1012,7 +1022,7 @@ void main() {
 
       migrate(v5);
 
-      expect(v5.userVersion, 8);
+      expect(v5.userVersion, 9);
       expect(allRows(v5, 'menu_items'), after);
     });
   });

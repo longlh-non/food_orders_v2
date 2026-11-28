@@ -80,7 +80,8 @@ void main() {
       Request(
         method,
         Uri.parse('http://localhost$path'),
-        headers: headers,
+        // PATCH is a staff route now: send the staff proof with it.
+        headers: method == 'PATCH' ? {..._staff, ...?headers} : headers,
         body: body is String || body == null ? body : jsonEncode(body),
       ),
     ),

@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 Map<String, dynamic> order(
   String placedAt, {
-  String status = 'delivered',
+  String status = 'finished',
   String? paymentMethod,
   List<Map<String, dynamic>>? items,
 }) {
@@ -23,16 +23,19 @@ Map<String, dynamic> order(
 }
 
 void main() {
-  group('deliveredOrders', () {
-    test('only delivered; other statuses excluded', () {
+  group('finishedOrders', () {
+    test('only finished; other statuses excluded', () {
       final orders = [
         order('2026-11-05T10:00:00.000', status: 'awaiting_payment'),
         order('2026-11-05T10:01:00.000', status: 'preparing'),
-        order('2026-11-05T10:02:00.000', status: 'ready'),
-        order('2026-11-05T10:03:00.000', status: 'delivered'),
+        order(
+          '2026-11-05T10:02:00.000',
+          status: 'delivered',
+        ), // legacy name, not a status any more
+        order('2026-11-05T10:03:00.000', status: 'finished'),
         order('2026-11-05T10:04:00.000', status: 'cancelled'),
       ];
-      final result = deliveredOrders(orders, '2026-11');
+      final result = finishedOrders(orders, '2026-11');
       expect(result, hasLength(1));
       expect(result.single.day, '2026-11-05');
     });
@@ -44,7 +47,7 @@ void main() {
         order('2026-11-30T23:59:59.999'),
         order('2026-12-01T00:00:00.000'),
       ];
-      final result = deliveredOrders(orders, '2026-11');
+      final result = finishedOrders(orders, '2026-11');
       expect(result.map((o) => o.day), ['2026-11-01', '2026-11-30']);
     });
 
@@ -56,7 +59,7 @@ void main() {
         order('2026-11-05T10:02:00.000'),
         order('2026-11-05T10:03:00.000', paymentMethod: 'something-else'),
       ];
-      final result = deliveredOrders(orders, '2026-11');
+      final result = finishedOrders(orders, '2026-11');
       expect(result.map((o) => o.method), [
         'bank_transfer',
         'cash',
@@ -68,11 +71,11 @@ void main() {
     test('an explicit null payment method also counts as cash', () {
       final o = order('2026-11-05T10:00:00.000', paymentMethod: null);
       o['paymentMethod'] = null;
-      expect(deliveredOrders([o], '2026-11').single.method, 'cash');
+      expect(finishedOrders([o], '2026-11').single.method, 'cash');
     });
 
     test('invalid month throws ArgumentError', () {
-      expect(() => deliveredOrders(const [], '2026-13'), throwsArgumentError);
+      expect(() => finishedOrders(const [], '2026-13'), throwsArgumentError);
     });
   });
 
@@ -134,7 +137,7 @@ void main() {
     test('an old order stored with no id and no toppings key', () {
       final total = orderTotal({
         'customerName': 'An',
-        'status': 'delivered',
+        'status': 'finished',
         'placedAt': '2026-11-05T10:00:00.000',
         'items': [
           {'name': 'Trà đá', 'quantity': 2, 'price': 4000},
@@ -151,12 +154,12 @@ void main() {
         ],
       );
       expect(orderTotal(o), 9.5);
-      final reportOrders = deliveredOrders([o], '2026-11');
+      final reportOrders = finishedOrders([o], '2026-11');
       expect(nonWholeOrders(reportOrders), 1);
     });
 
     test('nonWholeOrders counts only non-whole totals', () {
-      final orders = deliveredOrders([
+      final orders = finishedOrders([
         order('2026-11-01T10:00:00.000'), // 25000, whole
         order(
           '2026-11-02T10:00:00.000',
@@ -325,7 +328,7 @@ void main() {
     });
 
     test('cash and transfer are split', () {
-      final orders = deliveredOrders([
+      final orders = finishedOrders([
         order('2026-11-05T10:00:00.000', paymentMethod: 'cash'),
         order('2026-11-05T10:01:00.000', paymentMethod: 'bank_transfer'),
       ], '2026-11');
@@ -339,7 +342,7 @@ void main() {
     });
 
     test('an order with no payment method counts as cash', () {
-      final orders = deliveredOrders([
+      final orders = finishedOrders([
         order('2026-11-05T10:00:00.000'),
       ], '2026-11');
       final day = dailyTotals(
@@ -351,7 +354,7 @@ void main() {
     });
 
     test('several orders on one day sum correctly, oldest first', () {
-      final orders = deliveredOrders([
+      final orders = finishedOrders([
         order(
           '2026-11-05T12:00:00.000',
           items: [
@@ -382,7 +385,7 @@ void main() {
 
   group('daysWithOrders', () {
     test('only non-empty days, in date order', () {
-      final orders = deliveredOrders([
+      final orders = finishedOrders([
         order('2026-11-20T10:00:00.000'),
         order('2026-11-03T10:00:00.000'),
       ], '2026-11');
@@ -393,7 +396,7 @@ void main() {
       }
     });
 
-    test('a month with no delivered orders returns no days', () {
+    test('a month with no finished orders returns no days', () {
       expect(daysWithOrders(const [], '2026-11'), isEmpty);
     });
   });

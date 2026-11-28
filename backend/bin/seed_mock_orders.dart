@@ -8,7 +8,7 @@ import 'package:food_orders_backend/mock_orders_db.dart';
 import 'package:food_orders_backend/orders_export.dart' show isValidMonth;
 
 const _usage = '''
-Seeds realistic delivered/cancelled mock orders for one month.
+Seeds realistic finished/cancelled mock orders for one month.
 
   dart run bin/seed_mock_orders.dart [--month=YYYY-MM] [--db=PATH]
                                      [--seed=N] [--clean] [--yes]

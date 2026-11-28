@@ -40,7 +40,7 @@ const mockCustomerNames = [
 ];
 
 /// Rows for `INSERT INTO orders`, in the `Order.toJson()` shape: `id`,
-/// `customerName`, `status` (`delivered` or `cancelled` only), `placedAt`,
+/// `customerName`, `status` (`finished` or `cancelled` only), `placedAt`,
 /// `items`, `paymentMethod`, `paymentDueAt` (always null: settled orders).
 ///
 /// Every day of [month] (`YYYY-MM`) gets orders except one seed-chosen day,
@@ -158,7 +158,7 @@ Map<String, dynamic> _draft(
     rnd.nextInt(60),
   );
   final cancelled = rnd.nextInt(100) < 15;
-  final status = cancelled ? 'cancelled' : 'delivered';
+  final status = cancelled ? 'cancelled' : 'finished';
   final method = rnd.nextInt(100) < 40 ? paymentBankTransfer : paymentCash;
   assert(orderStatuses.contains(status) && paymentMethods.contains(method));
   assert('mock-0-0'.length <= maxIdLength);

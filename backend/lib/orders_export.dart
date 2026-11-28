@@ -168,7 +168,7 @@ class ExportSummary {
   /// How many order lines (CSV rows) they have.
   final int lines;
 
-  /// VND per status, e.g. `{'delivered': 125000, 'cancelled': 25000}`.
+  /// VND per status, e.g. `{'finished': 125000, 'cancelled': 25000}`.
   final Map<String, num> totalsByStatus;
 
   /// Every status except `cancelled`.

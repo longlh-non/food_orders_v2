@@ -8,9 +8,9 @@ import 'xlsx_writer.dart';
 ///
 /// [days] is what `dailyTotals` (`orders_report.dart`) returns: one entry
 /// per calendar day of the month, in date order, even for a day with no
-/// delivered order (RPT1: every day is shown, unlike the detail report).
+/// finished order (RPT1: every day is shown, unlike the detail report).
 /// This module only draws the days it is handed; it never calls
-/// `deliveredOrders`, `dailyTotals`, `daysInMonth` or `daysWithOrders`
+/// `finishedOrders`, `dailyTotals`, `daysInMonth` or `daysWithOrders`
 /// itself, so it never parses a raw stored order and can't hit a malformed
 /// row — that only happens one layer up, in whatever builds [days].
 ///
